@@ -3,7 +3,7 @@ name: 🔄 Update iNat TV Playlist
 on:
   schedule:
     # Her gün saat 06:00 ve 18:00 UTC'de çalışır
-    - cron: '0 6,18 * * *'
+    - cron: '*/40 * * * *'
   workflow_dispatch:    # Manuel tetikleme
     inputs:
       channel:

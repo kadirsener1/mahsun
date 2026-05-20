@@ -6,6 +6,18 @@ import logging
 from datetime import datetime
 import requests as req_lib
 
+# ... diğer import'lar ...
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+
+# get_driver() içinde:
+def get_driver():
+    log.info("🔧 Driver başlatılıyor...")
+    # ...
+    # Service kısmını şununla değiştir:
+    service = Service(ChromeDriverManager().install())
+    # ...
+
 # ── Logging ───────────────────────────────────────────
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(

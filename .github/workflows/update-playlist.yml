@@ -1,64 +1,89 @@
-name: 🔄 Update iNat TV Playlist
+name: Update M3U Playlist
 
 on:
+  # Her 31 dakikada bir çalış
   schedule:
-    # Her gün saat 06:00 ve 18:00 UTC'de çalışır
-    - cron: '*/40 * * * *'
-  workflow_dispatch:    # Manuel tetikleme
-    inputs:
-      channel:
-        description: 'Tek kanal adı (boş bırakırsan hepsi güncellenir)'
-        required: false
-        default: ''
+    - cron: '*/31 * * * *'
+  
+  # Manuel tetikleme
+  workflow_dispatch:
+  
+  # Push ile tetikleme (ilk kurulum için)
+  push:
+    branches:
+      - main
+    paths:
+      - 'scraper.py'
+      - '.github/workflows/update-playlist.yml'
+
+permissions:
+  contents: write
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    
     steps:
-      - name: 📥 Repoyu çek
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: 🐍 Python 3.12 kur
+        with:
+          fetch-depth: 1
+      
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: 🌐 Chrome + ChromeDriver kur
-        uses: browser-actions/setup-chrome@v1
+          python-version: '3.11'
+      
+      - name: Cache pip packages
+        uses: actions/cache@v4
         with:
-          chrome-version: stable
-
-      - name: 📦 Bağımlılıkları yükle
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: 🚀 Playlist'i güncelle
+      
+      - name: Run scraper
         run: |
-          if [ -n "${{ github.event.inputs.channel }}" ]; then
-            python main.py --channel "${{ github.event.inputs.channel }}"
-          else
-            python main.py
-          fi
+          python scraper.py
         env:
-          PYTHONUNBUFFERED: '1'
-
-      - name: 📤 Değişiklikleri commit et ve push et
+          PYTHONUNBUFFERED: "1"
+        timeout-minutes: 30
+      
+      - name: Check for changes
+        id: check_changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add playlist.m3u update.log
-          if git diff --staged --quiet; then
-            echo "Değişiklik yok, commit atlanıyor."
+          git add -A
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Değişiklik yok."
           else
-            TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
-            git commit -m "🔄 Playlist güncellendi: $TIMESTAMP"
-            git push
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Değişiklikler tespit edildi."
           fi
-
-      - name: 📋 Güncelleme logunu göster
+      
+      - name: Commit and push
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          git commit -m "🔄 Playlist güncellendi - ${TIMESTAMP}"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload playlist as artifact
         if: always()
-        run: cat update.log 2>/dev/null || echo "Log bulunamadı"
+        uses: actions/upload-artifact@v4
+        with:
+          name: playlist
+          path: |
+            playlist.m3u
+            state.json
+          retention-days: 7

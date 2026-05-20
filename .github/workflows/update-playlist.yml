@@ -2,7 +2,7 @@ name: Mahsunsports M3U8 Scraper
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # Her 6 saatte bir çalışır
+    - cron: '0 */6 * * *'   # Her 6 saatte bir
   workflow_dispatch:          # Manuel tetikleme
 
 jobs:
@@ -10,50 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Repo'yu çek ──────────────────────────────
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      # ── 2. Python kur ───────────────────────────────
       - name: 🐍 Python Kur
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # ── 3. Chrome kur ───────────────────────────────
       - name: 🌐 Chrome Kur
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
 
-      # ── 4. ChromeDriver kur ─────────────────────────
-      - name: 🔧 ChromeDriver Kur
-        uses: nanasess/setup-chromedriver@v1
-
-      # ── 5. Python kütüphaneleri ──────────────────────
+      # Chromedriver'ı pip ile kur (webdriver-manager)
       - name: 📦 Kütüphaneleri Kur
         run: |
           pip install --upgrade pip
-          pip install requests selenium seleniumwire
+          pip install requests selenium seleniumwire webdriver-manager
 
-      # ── 6. Scraper'ı çalıştır ───────────────────────
       - name: 🚀 Scraper Çalıştır
         env:
-          CHROMEDRIVER_PATH: /usr/local/bin/chromedriver
-          CHROME_BIN: /usr/bin/google-chrome
+          CHROME_BIN: /usr/bin/google-chrome   # veya chrome'ın yolu
         run: |
           python scraper.py
 
-      # ── 7. Sonuçları kontrol et ─────────────────────
       - name: 📋 Sonuçları Göster
         run: |
           echo "=== playlist.m3u ==="
-          cat playlist.m3u || echo "playlist.m3u bulunamadı"
+          cat playlist.m3u || echo "Bulunamadı"
           echo ""
           echo "=== stats.json ==="
-          cat stats.json || echo "stats.json bulunamadı"
+          cat stats.json || echo "Bulunamadı"
 
-      # ── 8. Değişiklikleri commit et ──────────────────
       - name: 💾 Commit & Push
         run: |
           git config --local user.email "action@github.com"

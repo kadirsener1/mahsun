@@ -1,81 +1,65 @@
-name: Update M3U Playlist
+name: Mahsunsports M3U8 Scraper
 
 on:
   schedule:
-    # Her 31 dakikada bir (GitHub cron en az 5dk destekler)
-    - cron: '*/31 * * * *'
-  workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'scraper.py'
-      - '.github/workflows/update-playlist.yml'
-
-permissions:
-  contents: write
+    - cron: '0 */6 * * *'   # Her 6 saatte bir çalışır
+  workflow_dispatch:          # Manuel tetikleme
 
 jobs:
-  update:
+  scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
 
     steps:
-      - name: Checkout
+      # ── 1. Repo'yu çek ──────────────────────────────
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      # ── 2. Python kur ───────────────────────────────
+      - name: 🐍 Python Kur
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
 
-      - name: Setup Chrome & ChromeDriver
+      # ── 3. Chrome kur ───────────────────────────────
+      - name: 🌐 Chrome Kur
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
 
-      - name: Install ChromeDriver
-        run: |
-          # Chrome versiyonunu al
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-          echo "Chrome: $CHROME_VERSION"
+      # ── 4. ChromeDriver kur ─────────────────────────
+      - name: 🔧 ChromeDriver Kur
+        uses: nanasess/setup-chromedriver@v1
 
-          # chromedriver-autoinstaller ile otomatik eşleştir
-          pip install chromedriver-autoinstaller
-          python -c "import chromedriver_autoinstaller; chromedriver_autoinstaller.install()"
-
-      - name: Install dependencies
+      # ── 5. Python kütüphaneleri ──────────────────────
+      - name: 📦 Kütüphaneleri Kur
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install requests selenium seleniumwire
 
-      - name: Run scraper
-        run: python scraper.py
+      # ── 6. Scraper'ı çalıştır ───────────────────────
+      - name: 🚀 Scraper Çalıştır
         env:
-          PYTHONUNBUFFERED: "1"
-
-      - name: Commit & Push
+          CHROMEDRIVER_PATH: /usr/local/bin/chromedriver
+          CHROME_BIN: /usr/bin/google-chrome
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add -A
+          python scraper.py
 
-          if git diff --cached --quiet; then
-            echo "Değişiklik yok."
-          else
-            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
-            CHANNEL_COUNT=$(grep -c "^#EXTINF" playlist.m3u 2>/dev/null || echo "0")
-            git commit -m "🔄 Playlist güncellendi - ${CHANNEL_COUNT} kanal - ${TIMESTAMP}"
-            git push
-          fi
+      # ── 7. Sonuçları kontrol et ─────────────────────
+      - name: 📋 Sonuçları Göster
+        run: |
+          echo "=== playlist.m3u ==="
+          cat playlist.m3u || echo "playlist.m3u bulunamadı"
+          echo ""
+          echo "=== stats.json ==="
+          cat stats.json || echo "stats.json bulunamadı"
 
-      - name: Upload artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playlist-files
-          path: |
-            playlist.m3u
-            state.json
-            channels_backup.json
-          retention-days: 5
+      # ── 8. Değişiklikleri commit et ──────────────────
+      - name: 💾 Commit & Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add playlist.m3u stats.json logs/ || true
+          git diff --staged --quiet || git commit -m "🔄 Playlist güncellendi: $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

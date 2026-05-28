@@ -16,21 +16,61 @@ jobs:
       - name: 🐍 Python Kur
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'          # ← 3.10 daha stabil
+          python-version: '3.11'
 
       - name: 🌐 Chrome Kur
-        uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: stable
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y wget unzip curl
 
-      - name: 📦 Kütüphaneleri Kur
+          # Google Chrome kur
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+          rm google-chrome-stable_current_amd64.deb
+
+          # Chrome versiyonunu al
+          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+' | head -1)
+          echo "Chrome major version: $CHROME_VERSION"
+
+          # ChromeDriver indir (Chrome for Testing)
+          DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/$(curl -s https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_VERSION})/linux64/chromedriver-linux64.zip"
+          echo "Driver URL: $DRIVER_URL"
+
+          wget -q "$DRIVER_URL" -O chromedriver.zip || {
+            echo "⚠️ CfT başarısız, eski yöntem deneniyor..."
+            DRIVER_VER=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+            wget -q "https://chromedriver.storage.googleapis.com/${DRIVER_VER}/chromedriver_linux64.zip" -O chromedriver.zip
+          }
+
+          unzip -q chromedriver.zip
+          find . -name "chromedriver" -exec sudo mv {} /usr/local/bin/chromedriver \;
+          sudo chmod +x /usr/local/bin/chromedriver
+          rm -rf chromedriver.zip chromedriver-linux64/
+
+          # Doğrula
+          echo "✅ Chrome: $(google-chrome --version)"
+          echo "✅ Driver: $(chromedriver --version)"
+
+      - name: 📦 Python Kütüphaneleri Kur
         run: |
           pip install --upgrade pip
-          pip install requests selenium selenium-wire webdriver-manager
+          pip install requests selenium webdriver-manager
+
+      - name: 🔍 Sistem Kontrol
+        run: |
+          echo "=== Chrome ==="
+          which google-chrome && google-chrome --version
+          echo "=== Chromedriver ==="
+          which chromedriver && chromedriver --version
+          echo "=== Python ==="
+          python --version
+          echo "=== Selenium ==="
+          python -c "import selenium; print(selenium.__version__)"
 
       - name: 🚀 Scraper Çalıştır
         env:
           CHROME_BIN: /usr/bin/google-chrome
+          CHROMEDRIVER_PATH: /usr/local/bin/chromedriver
         run: |
           python scraper.py
 
@@ -47,7 +87,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add playlist.m3u stats.json logs/ || true
-          git diff --staged --quiet || git commit -m "🔄 Playlist güncellendi: $(date '+%Y-%m-%d %H:%M:%S')"
+          git diff --staged --quiet || git commit -m "🔄 Güncellendi: $(date '+%Y-%m-%d %H:%M:%S')"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

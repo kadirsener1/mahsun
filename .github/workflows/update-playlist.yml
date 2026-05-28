@@ -2,8 +2,8 @@ name: Mahsunsports M3U8 Scraper
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # Her 6 saatte bir
-  workflow_dispatch:          # Manuel tetikleme
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -16,22 +16,21 @@ jobs:
       - name: 🐍 Python Kur
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'          # ← 3.10 daha stabil
 
       - name: 🌐 Chrome Kur
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
 
-      # Chromedriver'ı pip ile kur (webdriver-manager)
       - name: 📦 Kütüphaneleri Kur
         run: |
           pip install --upgrade pip
-          pip install requests selenium seleniumwire webdriver-manager
+          pip install requests selenium selenium-wire webdriver-manager
 
       - name: 🚀 Scraper Çalıştır
         env:
-          CHROME_BIN: /usr/bin/google-chrome   # veya chrome'ın yolu
+          CHROME_BIN: /usr/bin/google-chrome
         run: |
           python scraper.py
 

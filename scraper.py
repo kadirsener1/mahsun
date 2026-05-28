@@ -42,7 +42,7 @@ logging.getLogger("selenium").setLevel(logging.ERROR)
 # ═══════════════════════════════════════════════════════
 #  BASE URL OTOMATİK BUL
 # ═══════════════════════════════════════════════════════
-MIN_NUMBER  = 1
+MIN_NUMBER  = 0
 MAX_NUMBER  = 60
 DOMAIN_BASE = "mahsunsports"
 DOMAIN_TLD  = "xyz"

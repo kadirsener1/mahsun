@@ -7,6 +7,20 @@ import subprocess
 from datetime import datetime
 import requests as req_lib
 
+# ── Sabitler ──────────────────────────────────────────
+STREAM_WAIT    = 5       # Network izleme süresi (saniye)
+BODY_WAIT      = 6       # Sayfa yükleme bekleme
+POLL_INTERVAL  = 0.5     # Log kontrol aralığı
+DOMAIN_TIMEOUT = 3       # Domain tarama timeout
+MIN_NUMBER     = 0
+MAX_NUMBER     = 60
+DOMAIN_BASE    = "mahsunsports"
+DOMAIN_TLD     = "xyz"
+OUTPUT_FILE    = "playlist.m3u"
+STATS_FILE     = "stats.json"
+CHROMEDRIVER   = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
+CHROME_BIN     = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome")
+
 # ── Logging ───────────────────────────────────────────
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
@@ -21,20 +35,34 @@ logging.basicConfig(
     ]
 )
 log = logging.getLogger(__name__)
-
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 logging.getLogger("selenium").setLevel(logging.ERROR)
 
 
 # ═══════════════════════════════════════════════════════
+#  SELENIUM - Wire opsiyonel
+# ═══════════════════════════════════════════════════════
+try:
+    from seleniumwire import webdriver
+    WIRE = True
+    log.info("✅ SeleniumWire aktif")
+    logging.getLogger("seleniumwire").setLevel(logging.ERROR)
+    logging.getLogger("hpack").setLevel(logging.ERROR)
+except ImportError:
+    from selenium import webdriver
+    WIRE = False
+    log.info("ℹ️ SeleniumWire yok, performans logları kullanılacak")
+
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+
+# ═══════════════════════════════════════════════════════
 #  BASE URL OTOMATİK BUL
 # ═══════════════════════════════════════════════════════
-MIN_NUMBER  = 0
-MAX_NUMBER  = 60
-DOMAIN_BASE = "mahsunsports"
-DOMAIN_TLD  = "xyz"
-
-
 def generate_domains():
     domains = []
     for i in range(MIN_NUMBER, MAX_NUMBER + 1):
@@ -43,6 +71,7 @@ def generate_domains():
 
 
 def find_base_url():
+    session = req_lib.Session()
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -54,31 +83,24 @@ def find_base_url():
 
     for domain in generate_domains():
         try:
-            resp = req_lib.get(
+            resp = session.get(
                 domain,
                 headers=headers,
-                timeout=8,
+                timeout=DOMAIN_TIMEOUT,
                 allow_redirects=False
             )
             if resp.status_code in (200, 301, 302, 303, 307, 308):
                 final_url = domain.rstrip("/")
                 log.info(f"  ✅ Aktif domain bulundu: {final_url} (HTTP {resp.status_code})")
                 return final_url
-            else:
-                log.debug(f"  {domain} → {resp.status_code}")
-        except Exception as e:
-            log.debug(f"  {domain} → {e}")
+        except Exception:
+            pass
 
     log.warning("⚠️ Çalışan domain bulunamadı, varsayılan kullanılıyor.")
     return f"https://{DOMAIN_BASE}35.{DOMAIN_TLD}"
 
 
-# ── Ayarlar ───────────────────────────────────────────
-BASE_URL    = find_base_url()
-OUTPUT_FILE = "playlist.m3u"
-STATS_FILE  = "stats.json"
-STREAM_WAIT = 12
-
+BASE_URL = find_base_url()
 log.info(f"🌐 BASE_URL: {BASE_URL}")
 
 
@@ -86,124 +108,92 @@ log.info(f"🌐 BASE_URL: {BASE_URL}")
 #  TARANACAK SAYFALAR
 # ═══════════════════════════════════════════════════════
 PAGES = [
-    # ── beIN Sports ───────────────────────────────────
-    {"slug": "event.html?id=androstreamlivebs1",    "name": "BeIN Sports 1",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivebs2",    "name": "BeIN Sports 2",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivebs3",    "name": "BeIN Sports 3",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivebs4",    "name": "BeIN Sports 4",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivebs5",    "name": "BeIN Sports 5",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivebsm1",   "name": "BeIN Sports Max 1",  "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivebsm2",   "name": "BeIN Sports Max 2",  "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivess1",    "name": "S Sport",            "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivess2",    "name": "S Sport 2",          "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivessplus1","name": "S Sport Plus",       "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivets",     "name": "Tivibu Spor",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivets1",    "name": "Tivibu Spor 1",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivets2",    "name": "Tivibu Spor 2",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivets3",    "name": "Tivibu Spor 3",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivets4",    "name": "Tivibu Spor 4",      "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivesm1",    "name": "Smart Spor 1",       "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivesm2",    "name": "Smart Spor 2",       "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivees1",    "name": "Euro Sport 1",       "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivees2",    "name": "Euro Sport 2",       "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveidm",    "name": "iDMAN Tv",           "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetrts",   "name": "TRT Spor",           "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetrtsy",  "name": "TRT Spor Yıldız",   "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetrts1",  "name": "TRT 1",              "group": "Genel"},
-    {"slug": "event.html?id=androstreamliveatv",    "name": "Atv",                "group": "Genel"},
-    {"slug": "event.html?id=androstreamliveas",     "name": "A Spor",             "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivea2",     "name": "A2",                 "group": "Genel"},
-    {"slug": "event.html?id=androstreamlivetjk",    "name": "Tjk Tv",             "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveht",     "name": "Ht Spor",            "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivenba",    "name": "NBA Tv",             "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetv8",    "name": "TV8",                "group": "Genel"},
-    {"slug": "event.html?id=androstreamlivetv85",   "name": "TV8,5",              "group": "Genel"},
-    {"slug": "event.html?id=androstreamlivetb",     "name": "Tabi Spor",          "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb1",    "name": "Tabi Spor 1",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb2",    "name": "Tabi Spor 2",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb3",    "name": "Tabi Spor 3",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb4",    "name": "Tabi Spor 4",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb5",    "name": "Tabi Spor 5",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb6",    "name": "Tabi Spor 6",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb7",    "name": "Tabi Spor 7",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivetb8",    "name": "Tabi Spor 8",        "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivefb",     "name": "FB Tv",              "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivegs",     "name": "GS Tv",              "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivecbcs",   "name": "CBC Sport",          "group": "Spor"},
-    {"slug": "event.html?id=androstreamlivesptstv", "name": "Sports Tv",          "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn",    "name": "Exxen Tv",           "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn1",   "name": "Exxen Sports 1",     "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn2",   "name": "Exxen Sports 2",     "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn3",   "name": "Exxen Sports 3",     "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn4",   "name": "Exxen Sports 4",     "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn5",   "name": "Exxen Sports 5",     "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn6",   "name": "Exxen Sports 6",     "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn7",   "name": "Exxen Sports 7",     "group": "Spor"},
-    {"slug": "event.html?id=androstreamliveexn8",   "name": "Exxen Sports 8",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs1",     "name": "BeIN Sports 1",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs2",     "name": "BeIN Sports 2",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs3",     "name": "BeIN Sports 3",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs4",     "name": "BeIN Sports 4",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs5",     "name": "BeIN Sports 5",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebsm1",    "name": "BeIN Sports Max 1",  "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebsm2",    "name": "BeIN Sports Max 2",  "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivess1",     "name": "S Sport",            "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivess2",     "name": "S Sport 2",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivessplus1", "name": "S Sport Plus",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets",      "name": "Tivibu Spor",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets1",     "name": "Tivibu Spor 1",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets2",     "name": "Tivibu Spor 2",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets3",     "name": "Tivibu Spor 3",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets4",     "name": "Tivibu Spor 4",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivesm1",     "name": "Smart Spor 1",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivesm2",     "name": "Smart Spor 2",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivees1",     "name": "Euro Sport 1",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivees2",     "name": "Euro Sport 2",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveidm",     "name": "iDMAN Tv",           "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetrts",    "name": "TRT Spor",           "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetrtsy",   "name": "TRT Spor Yıldız",    "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetrts1",   "name": "TRT 1",              "group": "Genel"},
+    {"slug": "event.html?id=androstreamliveatv",     "name": "Atv",                "group": "Genel"},
+    {"slug": "event.html?id=androstreamliveas",      "name": "A Spor",             "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivea2",      "name": "A2",                 "group": "Genel"},
+    {"slug": "event.html?id=androstreamlivetjk",     "name": "Tjk Tv",             "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveht",      "name": "Ht Spor",            "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivenba",     "name": "NBA Tv",             "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetv8",     "name": "TV8",                "group": "Genel"},
+    {"slug": "event.html?id=androstreamlivetv85",    "name": "TV8,5",              "group": "Genel"},
+    {"slug": "event.html?id=androstreamlivetb",      "name": "Tabi Spor",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb1",     "name": "Tabi Spor 1",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb2",     "name": "Tabi Spor 2",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb3",     "name": "Tabi Spor 3",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb4",     "name": "Tabi Spor 4",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb5",     "name": "Tabi Spor 5",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb6",     "name": "Tabi Spor 6",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb7",     "name": "Tabi Spor 7",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb8",     "name": "Tabi Spor 8",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivefb",      "name": "FB Tv",              "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivegs",      "name": "GS Tv",              "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivecbcs",    "name": "CBC Sport",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivesptstv",  "name": "Sports Tv",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn",     "name": "Exxen Tv",           "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn1",    "name": "Exxen Sports 1",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn2",    "name": "Exxen Sports 2",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn3",    "name": "Exxen Sports 3",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn4",    "name": "Exxen Sports 4",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn5",    "name": "Exxen Sports 5",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn6",    "name": "Exxen Sports 6",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn7",    "name": "Exxen Sports 7",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn8",    "name": "Exxen Sports 8",     "group": "Spor"},
 ]
-
-
-# ═══════════════════════════════════════════════════════
-#  SELENIUM - SeleniumWire opsiyonel
-# ═══════════════════════════════════════════════════════
-try:
-    from seleniumwire import webdriver
-    WIRE = True
-    log.info("✅ SeleniumWire aktif")
-except ImportError:
-    from selenium import webdriver
-    WIRE = False
-    log.warning("⚠️ SeleniumWire yok, performans logları kullanılacak")
-
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 
 # ═══════════════════════════════════════════════════════
 #  CHROMEDRIVER OTOMATİK BUL
 # ═══════════════════════════════════════════════════════
 def find_chromedriver():
-    """Sistemdeki chromedriver'ı otomatik bul"""
-    
-    # Önce env değişkenine bak
     env_path = os.environ.get("CHROMEDRIVER_PATH", "")
     if env_path and os.path.exists(env_path):
         log.info(f"✅ Chromedriver (env): {env_path}")
         return env_path
 
-    # Bilinen yolları dene
-    known_paths = [
+    known = [
         "/usr/local/bin/chromedriver",
         "/usr/bin/chromedriver",
         "/snap/bin/chromedriver",
-        "/opt/chromedriver",
-        "/home/runner/work/chromedriver",
     ]
-    for path in known_paths:
-        if os.path.exists(path):
-            log.info(f"✅ Chromedriver bulundu: {path}")
-            return path
+    for p in known:
+        if os.path.exists(p):
+            log.info(f"✅ Chromedriver: {p}")
+            return p
 
-    # which komutu ile ara
     try:
-        result = subprocess.run(
-            ["which", "chromedriver"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            path = result.stdout.strip()
+        r = subprocess.run(["which", "chromedriver"], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            path = r.stdout.strip()
             log.info(f"✅ Chromedriver (which): {path}")
             return path
     except Exception:
         pass
 
-    # webdriver-manager ile otomatik kur (fallback)
     try:
         from webdriver_manager.chrome import ChromeDriverManager
-        from webdriver_manager.core.os_manager import ChromeType
         path = ChromeDriverManager().install()
         log.info(f"✅ Chromedriver (wdm): {path}")
         return path
@@ -215,32 +205,26 @@ def find_chromedriver():
 
 
 def find_chrome_binary():
-    """Chrome binary yolunu bul"""
-    
     env_path = os.environ.get("CHROME_BIN", "")
     if env_path and os.path.exists(env_path):
         return env_path
 
-    known_paths = [
+    known = [
         "/usr/bin/google-chrome",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/chromium-browser",
         "/usr/bin/chromium",
-        "/snap/bin/chromium",
         "/opt/google/chrome/chrome",
     ]
-    for path in known_paths:
-        if os.path.exists(path):
-            log.info(f"✅ Chrome binary: {path}")
-            return path
+    for p in known:
+        if os.path.exists(p):
+            log.info(f"✅ Chrome: {p}")
+            return p
 
     try:
-        result = subprocess.run(
-            ["which", "google-chrome"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
+        r = subprocess.run(["which", "google-chrome"], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip()
     except Exception:
         pass
 
@@ -264,6 +248,8 @@ def get_driver():
     log.info("🔧 Driver başlatılıyor...")
 
     options = Options()
+    options.page_load_strategy = "eager"
+
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -272,20 +258,27 @@ def get_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--autoplay-policy=no-user-gesture-required")
     options.add_argument("--mute-audio")
-    options.add_argument("--disable-web-security")
-    options.add_argument("--allow-running-insecure-content")
-    options.add_argument("--ignore-certificate-errors")
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--disable-notifications")
+    options.add_argument("--ignore-certificate-errors")
+    options.add_argument("--allow-running-insecure-content")
+    options.add_argument("--disable-web-security")
     options.add_argument(
         "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Safari/537.36"
     )
+
+    # Resimleri / fontları kapat → hız kazanç
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.default_content_setting_values.notifications": 2,
+    }
+    options.add_experimental_option("prefs", prefs)
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
 
-    # Performance logging (SeleniumWire yoksa)
+    # Performance log (Wire yoksa)
     if not WIRE:
         options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
 
@@ -303,7 +296,6 @@ def get_driver():
             service = Service(executable_path=driver_path)
             log.info(f"🔧 Driver path: {driver_path}")
         else:
-            # Path vermeden dene (PATH'de olabilir)
             service = Service()
 
         if WIRE:
@@ -322,6 +314,20 @@ def get_driver():
         log.error(f"❌ Driver başlatma hatası: {e}")
         raise
 
+    # Gereksiz kaynakları engelle
+    try:
+        driver.execute_cdp_cmd("Network.enable", {})
+        driver.execute_cdp_cmd("Network.setBlockedURLs", {
+            "urls": [
+                "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.svg",
+                "*.woff", "*.woff2", "*.ttf", "*.eot",
+                "*google-analytics*", "*googletagmanager*",
+                "*facebook.net*", "*doubleclick.net*",
+            ]
+        })
+    except Exception:
+        pass
+
     try:
         driver.execute_script(
             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
@@ -329,142 +335,117 @@ def get_driver():
     except Exception:
         pass
 
-    driver.set_page_load_timeout(30)
+    driver.set_page_load_timeout(15)
     log.info("✅ Driver hazır")
     return driver
 
 
 # ═══════════════════════════════════════════════════════
-#  POPUP KAPAT
+#  POPUP KAPAT  (JS ile anlık - bekleme yok)
 # ═══════════════════════════════════════════════════════
 def close_popups(driver):
-    selectors = [
-        ".close", ".popup-close", "#close",
-        "[class*='close']", ".modal-close",
-        ".overlay-close", "[aria-label='Close']",
-        "[aria-label='Kapat']", ".btn-close",
-        "button.close", ".ad-close", "#ad-close",
-    ]
-    for sel in selectors:
-        try:
-            el = WebDriverWait(driver, 1).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
-            )
-            el.click()
-            log.info(f"  ❎ Popup kapatıldı: {sel}")
-            time.sleep(0.5)
-        except Exception:
-            pass
-
-
-# ═══════════════════════════════════════════════════════
-#  PLAY BUTONU
-# ═══════════════════════════════════════════════════════
-def click_play(driver):
-    selectors = [
-        ".play-button", ".btn-play", "#play-button",
-        ".jw-icon-playback", ".vjs-play-button",
-        ".fp-play", ".plyr__control--overlaid",
-        "[class*='play-btn']", "[class*='play_btn']",
-        "[class*='play-icon']", "[aria-label='Play']",
-        "[aria-label='Oynat']", "[title='Play']",
-        "[title='Oynat']", "button.play",
-        ".overlay-play", ".player-overlay",
-        ".video-overlay", ".start-player",
-    ]
-    for sel in selectors:
-        try:
-            el = WebDriverWait(driver, 2).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
-            )
-            el.click()
-            log.info(f"  ▶️  Tıklandı: {sel}")
-            time.sleep(1)
-            return
-        except Exception:
-            pass
-
     try:
-        driver.execute_script("""
-            document.querySelectorAll('video').forEach(function(v) {
-                v.muted = true;
-                v.play().catch(function() {});
-            });
+        count = driver.execute_script("""
+            const sels = [
+                '.close', '.popup-close', '#close',
+                '[class*="close"]', '.modal-close',
+                '.overlay-close', '[aria-label="Close"]',
+                '[aria-label="Kapat"]', '.btn-close',
+                'button.close', '.ad-close', '#ad-close'
+            ];
+            let clicked = 0;
+            for (const sel of sels) {
+                document.querySelectorAll(sel).forEach(el => {
+                    try {
+                        const st = window.getComputedStyle(el);
+                        if (st.display !== 'none' && st.visibility !== 'hidden') {
+                            el.click();
+                            clicked++;
+                        }
+                    } catch(e) {}
+                });
+            }
+            return clicked;
         """)
-        time.sleep(1)
+        if count:
+            log.info(f"  ❎ Popup kapatıldı: {count} adet")
     except Exception:
         pass
 
 
 # ═══════════════════════════════════════════════════════
-#  PERFORMANCE LOG'DAN M3U8 BUL (SeleniumWire alternatifi)
+#  PLAY BUTONU  (JS ile anlık - bekleme yok)
+# ═══════════════════════════════════════════════════════
+def click_play(driver):
+    try:
+        clicked = driver.execute_script("""
+            const sels = [
+                '.play-button', '.btn-play', '#play-button',
+                '.jw-icon-playback', '.vjs-play-button',
+                '.fp-play', '.plyr__control--overlaid',
+                '[class*="play-btn"]', '[class*="play_btn"]',
+                '[class*="play-icon"]', '[aria-label="Play"]',
+                '[aria-label="Oynat"]', '[title="Play"]',
+                '[title="Oynat"]', 'button.play',
+                '.overlay-play', '.player-overlay',
+                '.video-overlay', '.start-player'
+            ];
+
+            for (const sel of sels) {
+                const els = document.querySelectorAll(sel);
+                for (const el of els) {
+                    try {
+                        const r = el.getBoundingClientRect();
+                        if (r.width > 0 && r.height > 0) {
+                            el.click();
+                            return sel;
+                        }
+                    } catch(e) {}
+                }
+            }
+
+            document.querySelectorAll('video').forEach(v => {
+                try { v.muted = true; v.play().catch(() => {}); } catch(e) {}
+            });
+
+            return null;
+        """)
+        if clicked:
+            log.info(f"  ▶️  Tıklandı: {clicked}")
+    except Exception:
+        pass
+
+
+# ═══════════════════════════════════════════════════════
+#  PERFORMANCE LOG → M3U8
 # ═══════════════════════════════════════════════════════
 def get_m3u8_from_performance_logs(driver):
-    """Chrome performance loglarından M3U8 yakala"""
     if WIRE:
         return None
-    
     try:
         logs = driver.get_log("performance")
-        for log_entry in logs:
+        for entry in logs:
             try:
-                msg = json.loads(log_entry["message"])
-                url = msg["message"]["params"]["request"]["url"]
-                if is_m3u8(url):
-                    log.info(f"  🎯 [PerfLog] {url}")
-                    return url
+                msg = json.loads(entry["message"])["message"]
+                params = msg.get("params", {})
+                candidates = [
+                    params.get("request", {}).get("url"),
+                    params.get("response", {}).get("url"),
+                    params.get("documentURL"),
+                ]
+                for url in candidates:
+                    if is_m3u8(url):
+                        log.info(f"  🎯 [PerfLog] {url}")
+                        return url
             except Exception:
                 pass
-    except Exception as e:
-        log.debug(f"  Perf log hatası: {e}")
+    except Exception:
+        pass
     return None
 
 
 # ═══════════════════════════════════════════════════════
-#  IFRAME İÇİNDE ARA
-# ═══════════════════════════════════════════════════════
-def handle_iframes(driver):
-    try:
-        iframes = driver.find_elements(By.TAG_NAME, "iframe")
-        log.info(f"  🖼️  {len(iframes)} iframe bulundu")
-
-        for idx, iframe in enumerate(iframes):
-            try:
-                src = iframe.get_attribute("src") or ""
-                log.info(f"  🖼️  iframe[{idx}]: {src[:100]}")
-
-                driver.switch_to.frame(iframe)
-                time.sleep(1)
-                click_play(driver)
-                time.sleep(2)
-
-                result = find_in_js(driver)
-                if result:
-                    driver.switch_to.default_content()
-                    return result
-
-                result = find_in_source(driver.page_source)
-                if result:
-                    driver.switch_to.default_content()
-                    return result
-
-                driver.switch_to.default_content()
-
-            except Exception as e:
-                log.debug(f"  iframe[{idx}] hata: {e}")
-                try:
-                    driver.switch_to.default_content()
-                except Exception:
-                    pass
-
-    except Exception as e:
-        log.debug(f"  iframe handler: {e}")
-
-    return None
-
-
-# ═══════════════════════════════════════════════════════
-#  JS'DEN M3U8 BUL
+#  JS → M3U8
 # ═══════════════════════════════════════════════════════
 def find_in_js(driver):
     try:
@@ -530,7 +511,7 @@ def find_in_js(driver):
 
 
 # ═══════════════════════════════════════════════════════
-#  HTML'DEN M3U8 BUL
+#  HTML → M3U8
 # ═══════════════════════════════════════════════════════
 def find_in_source(html):
     match = re.search(
@@ -547,6 +528,46 @@ def find_in_source(html):
 
 
 # ═══════════════════════════════════════════════════════
+#  IFRAME → M3U8
+# ═══════════════════════════════════════════════════════
+def handle_iframes(driver):
+    try:
+        iframes = driver.find_elements(By.TAG_NAME, "iframe")
+        log.info(f"  🖼️  {len(iframes)} iframe bulundu")
+
+        for idx, iframe in enumerate(iframes):
+            try:
+                src = iframe.get_attribute("src") or ""
+                log.info(f"  🖼️  iframe[{idx}]: {src[:100]}")
+
+                driver.switch_to.frame(iframe)
+                click_play(driver)
+
+                result = find_in_js(driver)
+                if result:
+                    driver.switch_to.default_content()
+                    return result
+
+                result = find_in_source(driver.page_source)
+                if result:
+                    driver.switch_to.default_content()
+                    return result
+
+                driver.switch_to.default_content()
+
+            except Exception as e:
+                log.debug(f"  iframe[{idx}] hata: {e}")
+                try:
+                    driver.switch_to.default_content()
+                except Exception:
+                    pass
+    except Exception as e:
+        log.debug(f"  iframe handler: {e}")
+
+    return None
+
+
+# ═══════════════════════════════════════════════════════
 #  TEK SAYFA TARA
 # ═══════════════════════════════════════════════════════
 def scrape_page(driver, page):
@@ -559,62 +580,68 @@ def scrape_page(driver, page):
     log.info(f"   URL : {url}")
     log.info(f"{'─'*55}")
 
+    # Eski istekleri temizle
     if WIRE:
         try:
             del driver.requests
         except Exception:
             pass
+    else:
+        try:
+            driver.get_log("performance")
+        except Exception:
+            pass
 
+    # Sayfayı yükle
     try:
         driver.get(url)
-        WebDriverWait(driver, 15).until(
+        WebDriverWait(driver, BODY_WAIT).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
     except Exception as e:
         log.warning(f"  ⚠️ Sayfa yükleme: {e}")
 
-    time.sleep(2)
+    time.sleep(0.5)
     close_popups(driver)
     click_play(driver)
-    time.sleep(2)
 
     m3u8_url = None
 
-    # 1. SeleniumWire (varsa)
-    if WIRE:
-        log.info(f"  📡 Network izleniyor ({STREAM_WAIT}s)...")
-        for elapsed in range(STREAM_WAIT):
-            for r in driver.requests:
-                if is_m3u8(r.url):
-                    m3u8_url = r.url
-                    log.info(f"  🎯 [{elapsed+1}s] Network: {m3u8_url}")
-                    break
-            if m3u8_url:
-                break
-            time.sleep(1)
-    else:
-        # Performance logları ile yakala
-        log.info(f"  📡 Performance log izleniyor ({STREAM_WAIT}s)...")
-        for elapsed in range(STREAM_WAIT):
-            m3u8_url = get_m3u8_from_performance_logs(driver)
-            if m3u8_url:
-                log.info(f"  🎯 [{elapsed+1}s] PerfLog: {m3u8_url}")
-                break
-            time.sleep(1)
+    # 1) Hemen JS kontrol
+    m3u8_url = find_in_js(driver)
 
-    # 2. JS
+    # 2) Hemen HTML kontrol
     if not m3u8_url:
-        log.info("  🔎 JS ile aranıyor...")
-        m3u8_url = find_in_js(driver)
+        m3u8_url = find_in_source(driver.page_source)
 
-    # 3. iframe
+    # 3) Network / Performance log izle
+    if not m3u8_url:
+        log.info(f"  📡 İzleniyor ({STREAM_WAIT}s)...")
+        deadline = time.time() + STREAM_WAIT
+
+        while time.time() < deadline and not m3u8_url:
+            if WIRE:
+                try:
+                    for r in driver.requests[-30:]:
+                        if is_m3u8(r.url):
+                            m3u8_url = r.url
+                            log.info(f"  🎯 [Network] {m3u8_url}")
+                            break
+                except Exception:
+                    pass
+            else:
+                m3u8_url = get_m3u8_from_performance_logs(driver)
+
+            if not m3u8_url:
+                time.sleep(POLL_INTERVAL)
+
+    # 4) iframe
     if not m3u8_url:
         log.info("  🖼️  iframe içinde aranıyor...")
         m3u8_url = handle_iframes(driver)
 
-    # 4. HTML
+    # 5) Son kez HTML
     if not m3u8_url:
-        log.info("  📄 HTML kaynağında aranıyor...")
         m3u8_url = find_in_source(driver.page_source)
 
     if m3u8_url:
@@ -675,7 +702,7 @@ def main():
                     "group": page["group"],
                 })
 
-            time.sleep(1.5)
+            time.sleep(0.5)
 
     except Exception as e:
         log.error(f"❌ Kritik hata: {e}", exc_info=True)

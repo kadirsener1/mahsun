@@ -1,8 +1,14 @@
 {
   "site": "mahsunsports",
-  "last_update": "2026-06-01T02:15:38.364959",
+  "last_update": "2026-06-01T11:09:36.563828",
   "base_url": "https://mahsunsports1.xyz",
-  "total_channels": 0,
-  "duration_sec": 357.3,
-  "channels": []
+  "total_channels": 1,
+  "duration_sec": 368.1,
+  "channels": [
+    {
+      "name": "A2",
+      "url": "https://andro.1286503.xyz/checklist/androstreamliveas.m3u8",
+      "group": "Genel"
+    }
+  ]
 }

@@ -1,8 +1,14 @@
 {
   "site": "mahsunsports",
-  "last_update": "2026-07-15T18:55:44.949477",
+  "last_update": "2026-07-16T01:22:23.768212",
   "base_url": "https://mahsunsports1.xyz",
-  "total_channels": 0,
-  "duration_sec": 352.3,
-  "channels": []
+  "total_channels": 1,
+  "duration_sec": 387.3,
+  "channels": [
+    {
+      "name": "S Sport 2",
+      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivess1.m3u8",
+      "group": "Spor"
+    }
+  ]
 }

@@ -1,14 +1,8 @@
 {
   "site": "mahsunsports",
-  "last_update": "2026-07-22T08:08:39.504401",
+  "last_update": "2026-07-22T13:20:19.732015",
   "base_url": "https://mahsunsports1.xyz",
-  "total_channels": 1,
+  "total_channels": 0,
   "duration_sec": 351.9,
-  "channels": [
-    {
-      "name": "Exxen Sports 7",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveexn6.m3u8",
-      "group": "Spor"
-    }
-  ]
+  "channels": []
 }

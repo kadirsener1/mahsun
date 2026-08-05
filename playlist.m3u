@@ -1,5 +1,17 @@
 #EXTM3U
 # Site      : mahsunsports
-# Güncelleme: 2026-08-05 01:21:35
-# Toplam    : 0 kanal
+# Güncelleme: 2026-08-05 08:19:54
+# Toplam    : 4 kanal
+
+#EXTINF:-1 tvg-name="S Sport" group-title="Spor",S Sport
+https://andro.evrenesoglu57.click/checklist/androstreamlivebsm2.m3u8
+
+#EXTINF:-1 tvg-name="S Sport 2" group-title="Spor",S Sport 2
+https://andro.evrenesoglu57.click/checklist/androstreamlivess1.m3u8
+
+#EXTINF:-1 tvg-name="Tivibu Spor 1" group-title="Spor",Tivibu Spor 1
+https://andro.evrenesoglu57.click/checklist/androstreamlivets.m3u8
+
+#EXTINF:-1 tvg-name="Tabi Spor 5" group-title="Spor",Tabi Spor 5
+https://andro.evrenesoglu57.click/checklist/androstreamlivetb4.m3u8
 

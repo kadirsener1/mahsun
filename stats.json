@@ -1,18 +1,13 @@
 {
   "site": "mahsunsports",
-  "last_update": "2026-08-14T12:40:16.616239",
+  "last_update": "2026-08-14T18:42:51.095860",
   "base_url": "https://mahsunsports50.xyz",
-  "total_channels": 2,
-  "duration_sec": 349.1,
+  "total_channels": 1,
+  "duration_sec": 345.6,
   "channels": [
     {
-      "name": "BeIN Sports 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/batutest.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "BeIN Sports Max 1",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebs5.m3u8",
+      "name": "BeIN Sports 4",
+      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebs3.m3u8",
       "group": "Spor"
     }
   ]

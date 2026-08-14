@@ -1,11 +1,8 @@
 #EXTM3U
 # Site      : mahsunsports
-# Güncelleme: 2026-08-14 12:40:16
-# Toplam    : 2 kanal
+# Güncelleme: 2026-08-14 18:42:51
+# Toplam    : 1 kanal
 
-#EXTINF:-1 tvg-name="BeIN Sports 2" group-title="Spor",BeIN Sports 2
-https://andro.evrenesoglu57.click/checklist/batutest.m3u8
-
-#EXTINF:-1 tvg-name="BeIN Sports Max 1" group-title="Spor",BeIN Sports Max 1
-https://andro.evrenesoglu57.click/checklist/androstreamlivebs5.m3u8
+#EXTINF:-1 tvg-name="BeIN Sports 4" group-title="Spor",BeIN Sports 4
+https://andro.evrenesoglu57.click/checklist/androstreamlivebs3.m3u8
 

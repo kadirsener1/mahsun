@@ -1,93 +1,18 @@
 {
   "site": "mahsunsports",
-  "last_update": "2026-08-14T07:06:44.922853",
+  "last_update": "2026-08-14T12:40:16.616239",
   "base_url": "https://mahsunsports50.xyz",
-  "total_channels": 17,
-  "duration_sec": 279.5,
+  "total_channels": 2,
+  "duration_sec": 349.1,
   "channels": [
     {
-      "name": "BeIN Sports 3",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebs2.m3u8",
+      "name": "BeIN Sports 2",
+      "url": "https://andro.evrenesoglu57.click/checklist/batutest.m3u8",
       "group": "Spor"
     },
     {
-      "name": "BeIN Sports Max 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebsm1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Tivibu Spor",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivessplus1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Tivibu Spor 4",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivets3.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Smart Spor 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivesm1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Euro Sport 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivees1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "TRT Spor Yıldız",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivetrts.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "A2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveas.m3u8",
-      "group": "Genel"
-    },
-    {
-      "name": "Ht Spor",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivetjk.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "TV8",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivenba.m3u8",
-      "group": "Genel"
-    },
-    {
-      "name": "Tabi Spor 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivetb1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Tabi Spor 4",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivetb3.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Tabi Spor 7",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivetb6.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "GS Tv",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivefb.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Sports Tv",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivecbcs.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Exxen Sports 1",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveexn.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Exxen Sports 7",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveexn6.m3u8",
+      "name": "BeIN Sports Max 1",
+      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebs5.m3u8",
       "group": "Spor"
     }
   ]

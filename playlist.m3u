@@ -1,53 +1,59 @@
 #EXTM3U
 # Site      : mahsunsports
-# Güncelleme: 2026-08-15 18:14:06
-# Toplam    : 16 kanal
+# Güncelleme: 2026-08-16 00:33:16
+# Toplam    : 18 kanal
 
-#EXTINF:-1 tvg-name="BeIN Sports 4" group-title="Spor",BeIN Sports 4
-https://andro.evrenesoglu57.click/checklist/androstreamlivebs3.m3u8
+#EXTINF:-1 tvg-name="BeIN Sports 3" group-title="Spor",BeIN Sports 3
+https://andro.evrenesoglu57.click/checklist/androstreamlivebs2.m3u8
 
-#EXTINF:-1 tvg-name="BeIN Sports Max 1" group-title="Spor",BeIN Sports Max 1
-https://andro.evrenesoglu57.click/checklist/androstreamlivebs5.m3u8
-
-#EXTINF:-1 tvg-name="S Sport" group-title="Spor",S Sport
-https://andro.evrenesoglu57.click/checklist/androstreamlivebsm2.m3u8
+#EXTINF:-1 tvg-name="BeIN Sports Max 2" group-title="Spor",BeIN Sports Max 2
+https://andro.evrenesoglu57.click/checklist/androstreamlivebsm1.m3u8
 
 #EXTINF:-1 tvg-name="Tivibu Spor" group-title="Spor",Tivibu Spor
 https://andro.evrenesoglu57.click/checklist/androstreamlivessplus1.m3u8
 
-#EXTINF:-1 tvg-name="Tivibu Spor 4" group-title="Spor",Tivibu Spor 4
-https://andro.evrenesoglu57.click/checklist/androstreamlivets3.m3u8
+#EXTINF:-1 tvg-name="Tivibu Spor 3" group-title="Spor",Tivibu Spor 3
+https://andro.evrenesoglu57.click/checklist/androstreamlivets2.m3u8
 
-#EXTINF:-1 tvg-name="Smart Spor 2" group-title="Spor",Smart Spor 2
-https://andro.evrenesoglu57.click/checklist/androstreamlivesm1.m3u8
+#EXTINF:-1 tvg-name="Smart Spor 1" group-title="Spor",Smart Spor 1
+https://andro.evrenesoglu57.click/checklist/androstreamlivets4.m3u8
+
+#EXTINF:-1 tvg-name="Euro Sport 2" group-title="Spor",Euro Sport 2
+https://andro.evrenesoglu57.click/checklist/androstreamlivees1.m3u8
 
 #EXTINF:-1 tvg-name="TRT Spor Yıldız" group-title="Spor",TRT Spor Yıldız
 https://andro.evrenesoglu57.click/checklist/androstreamlivetrts.m3u8
 
-#EXTINF:-1 tvg-name="Atv" group-title="Genel",Atv
-https://andro.evrenesoglu57.click/checklist/androstreamlivetrts1.m3u8
+#EXTINF:-1 tvg-name="A2" group-title="Genel",A2
+https://andro.evrenesoglu57.click/checklist/androstreamliveas.m3u8
 
-#EXTINF:-1 tvg-name="Tjk Tv" group-title="Spor",Tjk Tv
-https://andro.evrenesoglu57.click/checklist/androstreamlivea2.m3u8
+#EXTINF:-1 tvg-name="Ht Spor" group-title="Spor",Ht Spor
+https://andro.evrenesoglu57.click/checklist/androstreamlivetjk.m3u8
 
-#EXTINF:-1 tvg-name="TV8" group-title="Genel",TV8
-https://andro.evrenesoglu57.click/checklist/androstreamlivenba.m3u8
+#EXTINF:-1 tvg-name="TV8,5" group-title="Genel",TV8,5
+https://andro.evrenesoglu57.click/checklist/androstreamlivetv8.m3u8
 
-#EXTINF:-1 tvg-name="Tabi Spor" group-title="Spor",Tabi Spor
-https://andro.evrenesoglu57.click/checklist/androstreamlivetv85.m3u8
+#EXTINF:-1 tvg-name="Tabi Spor 1" group-title="Spor",Tabi Spor 1
+https://andro.evrenesoglu57.click/checklist/androstreamlivetb.m3u8
 
-#EXTINF:-1 tvg-name="Tabi Spor 4" group-title="Spor",Tabi Spor 4
-https://andro.evrenesoglu57.click/checklist/androstreamlivetb3.m3u8
+#EXTINF:-1 tvg-name="Tabi Spor 3" group-title="Spor",Tabi Spor 3
+https://andro.evrenesoglu57.click/checklist/androstreamlivetb2.m3u8
 
-#EXTINF:-1 tvg-name="Tabi Spor 8" group-title="Spor",Tabi Spor 8
-https://andro.evrenesoglu57.click/checklist/androstreamlivetb7.m3u8
+#EXTINF:-1 tvg-name="Tabi Spor 7" group-title="Spor",Tabi Spor 7
+https://andro.evrenesoglu57.click/checklist/androstreamlivetb6.m3u8
 
-#EXTINF:-1 tvg-name="GS Tv" group-title="Spor",GS Tv
-https://andro.evrenesoglu57.click/checklist/androstreamlivefb.m3u8
+#EXTINF:-1 tvg-name="FB Tv" group-title="Spor",FB Tv
+https://andro.evrenesoglu57.click/checklist/androstreamlivetb8.m3u8
 
-#EXTINF:-1 tvg-name="Exxen Sports 1" group-title="Spor",Exxen Sports 1
-https://andro.evrenesoglu57.click/checklist/androstreamliveexn.m3u8
+#EXTINF:-1 tvg-name="CBC Sport" group-title="Spor",CBC Sport
+https://andro.evrenesoglu57.click/checklist/androstreamlivegs.m3u8
+
+#EXTINF:-1 tvg-name="Exxen Tv" group-title="Spor",Exxen Tv
+https://andro.evrenesoglu57.click/checklist/androstreamlivesptstv.m3u8
 
 #EXTINF:-1 tvg-name="Exxen Sports 3" group-title="Spor",Exxen Sports 3
 https://andro.evrenesoglu57.click/checklist/androstreamliveexn2.m3u8
+
+#EXTINF:-1 tvg-name="Exxen Sports 6" group-title="Spor",Exxen Sports 6
+https://andro.evrenesoglu57.click/checklist/androstreamliveexn5.m3u8
 

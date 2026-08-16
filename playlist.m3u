@@ -1,5 +1,8 @@
 #EXTM3U
 # Site      : mahsunsports
-# Güncelleme: 2026-08-16 12:18:48
-# Toplam    : 0 kanal
+# Güncelleme: 2026-08-16 18:15:23
+# Toplam    : 1 kanal
+
+#EXTINF:-1 tvg-name="A2" group-title="Genel",A2
+https://andro.evrenesoglu57.click/checklist/androstreamliveas.m3u8
 

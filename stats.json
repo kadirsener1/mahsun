@@ -1,79 +1,8 @@
 {
   "site": "mahsunsports",
-  "last_update": "2026-08-18T18:22:21.607094",
+  "last_update": "2026-08-19T00:32:37.521908",
   "base_url": "https://mahsunsports50.xyz",
-  "total_channels": 14,
-  "duration_sec": 300.7,
-  "channels": [
-    {
-      "name": "BeIN Sports 4",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebs3.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "BeIN Sports Max 1",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebs5.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "S Sport",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebsm2.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Tivibu Spor 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivets1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Smart Spor 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivesm1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Euro Sport 2",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivees1.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "A Spor",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveatv.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Tjk Tv",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivea2.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "NBA Tv",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveht.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "TV8,5",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivetv8.m3u8",
-      "group": "Genel"
-    },
-    {
-      "name": "Tabi Spor 7",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivetb6.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "GS Tv",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivefb.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Exxen Sports 1",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveexn.m3u8",
-      "group": "Spor"
-    },
-    {
-      "name": "Exxen Sports 7",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamliveexn6.m3u8",
-      "group": "Spor"
-    }
-  ]
+  "total_channels": 0,
+  "duration_sec": 351.7,
+  "channels": []
 }

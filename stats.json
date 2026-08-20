@@ -1,14 +1,8 @@
 {
   "site": "mahsunsports",
-  "last_update": "2026-08-19T18:20:18.925967",
+  "last_update": "2026-08-20T00:33:24.821199",
   "base_url": "https://mahsunsports50.xyz",
-  "total_channels": 1,
-  "duration_sec": 351.0,
-  "channels": [
-    {
-      "name": "BeIN Sports 3",
-      "url": "https://andro.evrenesoglu57.click/checklist/androstreamlivebs2.m3u8",
-      "group": "Spor"
-    }
-  ]
+  "total_channels": 0,
+  "duration_sec": 355.4,
+  "channels": []
 }

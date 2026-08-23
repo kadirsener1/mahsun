@@ -1,139 +1,428 @@
-import requests
-import re
 import os
-import urllib3
-import warnings
-import concurrent.futures
+import re
+import json
+import time
+import logging
+import subprocess
+from datetime import datetime
+import requests as req_lib
 
-# --- AYARLAR ---
-warnings.filterwarnings('ignore')
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# ── Sabitler ──────────────────────────────────────────
+STREAM_WAIT    = 6       # Network izleme süresi (saniye)
+BODY_WAIT      = 6       # Sayfa yükleme bekleme
+POLL_INTERVAL  = 0.5     # Log kontrol aralığı
+DOMAIN_TIMEOUT = 3       # Domain tarama timeout
+MIN_NUMBER     = 49
+MAX_NUMBER     = 75
+DOMAIN_BASE    = "mahsunsports"
+DOMAIN_TLD     = "xyz"
+OUTPUT_FILE    = "playlist.m3u"
+STATS_FILE     = "stats.json"
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-}
+# ── Logging ───────────────────────────────────────────
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(
+            f"logs/scraper_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+            encoding="utf-8"
+        ),
+        logging.StreamHandler()
+    ]
+)
+log = logging.getLogger(__name__)
+logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger("selenium").setLevel(logging.ERROR)
 
-# DOSYAYA YAZILACAK BAŞLIK
-M3U8_HEADER = """#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-STREAM-INF:BANDWIDTH=5500000,AVERAGE-BANDWIDTH=8976000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2",FRAME-RATE=25"""
+# ═══════════════════════════════════════════════════════
+#  SELENIUM - Wire opsiyonel
+# ═══════════════════════════════════════════════════════
+try:
+    from seleniumwire import webdriver
+    WIRE = True
+    log.info("✅ SeleniumWire aktif")
+    logging.getLogger("seleniumwire").setLevel(logging.ERROR)
+    logging.getLogger("hpack").setLevel(logging.ERROR)
+except ImportError:
+    from selenium import webdriver
+    WIRE = False
+    log.info("ℹ️ SeleniumWire yok, standart selenium kullanılacak")
 
-OUTPUT_FOLDER = "playlist.m3u"
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-# İKİNCİ BOTTAKİ KANAL LİSTESİ
-CHANNELS = [
-    "androstreamlivebiraz1", "androstreamlivebs1", "androstreamlivebs2", "androstreamlivebs3",
-    "androstreamlivebs4", "androstreamlivebs5", "androstreamlivebsm1", "androstreamlivebsm2",
-    "androstreamlivess1", "androstreamlivess2", "androstreamlivets", "androstreamlivets1",
-    "androstreamlivets2", "androstreamlivets3", "androstreamlivets4", "androstreamlivesm1",
-    "androstreamlivesm2", "androstreamlivees1", "androstreamlivees2", "androstreamlivetb",
-    "androstreamlivetb1", "androstreamlivetb2", "androstreamlivetb3", "androstreamlivetb4",
-    "androstreamlivetb5", "androstreamlivetb6", "androstreamlivetb7", "androstreamlivetb8",
-    "androstreamlivessplus1"
+
+# ═══════════════════════════════════════════════════════
+#  BASE URL OTOMATİK BUL
+# ═══════════════════════════════════════════════════════
+def generate_domains():
+    return [f"https://{DOMAIN_BASE}{i}.{DOMAIN_TLD}" for i in range(MIN_NUMBER, MAX_NUMBER + 1)]
+
+
+def find_base_url():
+    session = req_lib.Session()
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
+    log.info(f"🔎 Domain taranıyor: {DOMAIN_BASE}{MIN_NUMBER}.{DOMAIN_TLD} → {DOMAIN_BASE}{MAX_NUMBER}.{DOMAIN_TLD}")
+
+    for domain in generate_domains():
+        try:
+            resp = session.get(domain, headers=headers, timeout=DOMAIN_TIMEOUT, allow_redirects=False)
+            if resp.status_code in (200, 301, 302, 303, 307, 308):
+                final_url = domain.rstrip("/")
+                log.info(f"  ✅ Aktif domain bulundu: {final_url} (HTTP {resp.status_code})")
+                return final_url
+        except Exception:
+            pass
+
+    log.warning("⚠️ Çalışan domain bulunamadı, varsayılan kullanılıyor.")
+    return f"https://{DOMAIN_BASE}49.{DOMAIN_TLD}"
+
+
+BASE_URL = find_base_url()
+log.info(f"🌐 BASE_URL: {BASE_URL}")
+
+
+# ═══════════════════════════════════════════════════════
+#  TARANACAK SAYFALAR
+# ═══════════════════════════════════════════════════════
+PAGES = [
+    {"slug": "event.html?id=androstreamlivebs1",     "name": "BeIN Sports 1",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs2",     "name": "BeIN Sports 2",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs3",     "name": "BeIN Sports 3",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs4",     "name": "BeIN Sports 4",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebs5",     "name": "BeIN Sports 5",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebsm1",    "name": "BeIN Sports Max 1",  "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivebsm2",    "name": "BeIN Sports Max 2",  "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivess1",     "name": "S Sport",            "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivess2",     "name": "S Sport 2",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivessplus1", "name": "S Sport Plus",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets",      "name": "Tivibu Spor",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets1",     "name": "Tivibu Spor 1",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets2",     "name": "Tivibu Spor 2",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets3",     "name": "Tivibu Spor 3",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivets4",     "name": "Tivibu Spor 4",      "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivesm1",     "name": "Smart Spor 1",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivesm2",     "name": "Smart Spor 2",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivees1",     "name": "Euro Sport 1",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivees2",     "name": "Euro Sport 2",       "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveidm",     "name": "iDMAN Tv",           "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetrts",    "name": "TRT Spor",           "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetrtsy",   "name": "TRT Spor Yıldız",    "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetrts1",   "name": "TRT 1",              "group": "Genel"},
+    {"slug": "event.html?id=androstreamliveatv",     "name": "Atv",                "group": "Genel"},
+    {"slug": "event.html?id=androstreamliveas",      "name": "A Spor",             "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivea2",      "name": "A2",                 "group": "Genel"},
+    {"slug": "event.html?id=androstreamlivetjk",     "name": "Tjk Tv",             "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveht",      "name": "Ht Spor",            "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivenba",     "name": "NBA Tv",             "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetv8",     "name": "TV8",                "group": "Genel"},
+    {"slug": "event.html?id=androstreamlivetv85",    "name": "TV8,5",              "group": "Genel"},
+    {"slug": "event.html?id=androstreamlivetb",      "name": "Tabi Spor",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb1",     "name": "Tabi Spor 1",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb2",     "name": "Tabi Spor 2",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb3",     "name": "Tabi Spor 3",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb4",     "name": "Tabi Spor 4",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb5",     "name": "Tabi Spor 5",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb6",     "name": "Tabi Spor 6",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb7",     "name": "Tabi Spor 7",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivetb8",     "name": "Tabi Spor 8",        "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivefb",      "name": "FB Tv",              "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivegs",      "name": "GS Tv",              "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivecbcs",    "name": "CBC Sport",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamlivesptstv",  "name": "Sports Tv",          "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn",     "name": "Exxen Tv",           "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn1",    "name": "Exxen Sports 1",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn2",    "name": "Exxen Sports 2",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn3",    "name": "Exxen Sports 3",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn4",    "name": "Exxen Sports 4",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn5",    "name": "Exxen Sports 5",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn6",    "name": "Exxen Sports 6",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn7",    "name": "Exxen Sports 7",     "group": "Spor"},
+    {"slug": "event.html?id=androstreamliveexn8",    "name": "Exxen Sports 8",     "group": "Spor"},
 ]
 
-def check_domain(index):
-    """Domainin aktif olup olmadığını kontrol eder."""
-    url = f"https://mahsunsports{index}.xyz"
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=5, verify=False)
-        if response.status_code == 200:
-            return url
-    except:
+
+# ═══════════════════════════════════════════════════════
+#  YARDIMCI: URL TEMİZLEME VE KONTROL
+# ═══════════════════════════════════════════════════════
+def clean_m3u8(url):
+    """Linkleri ters slash, boşluk ve HTML varlıklarından arındırır."""
+    if not url or not isinstance(url, str):
         return None
+    
+    url = url.strip().strip('"\'')
+    url = url.replace('\\/', '/')
+    url = url.replace('&amp;', '&')
+
+    # Gerçek URL bloğunu yakala
+    match = re.search(r'https?://[^\s\'"<>]+?\.m3u8(?:\?[^\s\'"<>]*)?', url, re.IGNORECASE)
+    if match:
+        return match.group(0)
+    
+    if ".m3u8" in url.lower():
+        return url
     return None
 
-def main():
-    if not os.path.exists(OUTPUT_FOLDER):
-        os.makedirs(OUTPUT_FOLDER)
 
-    print("🔍 Andro Panel için aktif domain aranıyor...")
-    
-    active_site = None
-    # Daha hızlı bulması için aynı anda 20 istek atıyoruz. (İlerisi için aralığı 46-150 yaptım)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-        futures = [executor.submit(check_domain, i) for i in range(46, 150)]
-        for future in concurrent.futures.as_completed(futures):
-            result = future.result()
-            if result:
-                active_site = result
-                executor.shutdown(wait=False, cancel_futures=True)
-                break
+def is_m3u8(url):
+    return clean_m3u8(url) is not None
 
-    if not active_site:
-        print("❌ Aktif site bulunamadı.")
-        return
 
-    print(f"✅ Aktif Domain Bulundu: {active_site}")
+# ═══════════════════════════════════════════════════════
+#  M3U VE JSON DOSYALARINI GÜNCELLEME (CANLI KAYIT)
+# ═══════════════════════════════════════════════════════
+def save_playlist(channels, elapsed=0):
+    """Her yeni kanal bulunduğunda dosyayı anında günceller."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lines = [
+        "#EXTM3U\n",
+        f"## Site       : {BASE_URL}\n",
+        f"## Güncelleme : {now}\n",
+        f"## Toplam     : {len(channels)} kanal\n"
+    ]
+    for ch in channels:
+        lines.append(f'#EXTINF:-1 tvg-name="{ch["name"]}" group-title="{ch["group"]}",{ch["name"]}\n')
+        lines.append(f'{ch["url"]}\n')
 
-    # Event sayfasından m3u8 baseurl'lerini çekme
-    event_url = f"{active_site}/event.html?id=androstreamlivebs1"
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+    with open(STATS_FILE, "w", encoding="utf-8") as f:
+        json.dump({
+            "site": BASE_URL,
+            "last_update": datetime.now().isoformat(),
+            "total_channels": len(channels),
+            "duration_sec": elapsed,
+            "channels": channels
+        }, f, ensure_ascii=False, indent=2)
+
+
+# ═══════════════════════════════════════════════════════
+#  DRIVER AYARLARI
+# ═══════════════════════════════════════════════════════
+def get_driver():
+    log.info("🔧 Driver başlatılıyor...")
+
+    options = Options()
+    options.page_load_strategy = "eager"
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--mute-audio")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument(
+        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.default_content_setting_values.notifications": 2,
+    }
+    options.add_experimental_option("prefs", prefs)
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
+
+    if not WIRE:
+        options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+
+    service = Service()
+    if WIRE:
+        driver = webdriver.Chrome(
+            service=service,
+            options=options,
+            seleniumwire_options={"verify_ssl": False, "suppress_connection_errors": True}
+        )
+    else:
+        driver = webdriver.Chrome(service=service, options=options)
+
+    driver.set_page_load_timeout(15)
+    log.info("✅ Driver hazır")
+    return driver
+
+
+def close_popups_and_play(driver):
     try:
-        r2 = requests.get(event_url, headers=HEADERS, verify=False, timeout=10)
-        h2_text = r2.text
-    except Exception as e:
-        print(f"❌ Event sayfası alınamadı. Hata: {e}")
-        return
+        driver.execute_script("""
+            const closeSels = ['.close', '.popup-close', '#close', '[aria-label="Close"]', '.btn-close'];
+            closeSels.forEach(s => document.querySelectorAll(s).forEach(el => el.click()));
+            
+            const playSels = ['.play-button', '.btn-play', '#play-button', '.jw-icon-playback', '.vjs-play-button'];
+            for (let s of playSels) {
+                let el = document.querySelector(s);
+                if (el) { el.click(); break; }
+            }
+            document.querySelectorAll('video').forEach(v => {
+                try { v.muted = true; v.play(); } catch(e){}
+            });
+        """)
+    except Exception:
+        pass
 
-    # Baseurl listesini yakalama
-    baseurl_match = re.search(r'baseurls\s*=\s*\[(.*?)\]', h2_text, re.DOTALL | re.IGNORECASE)
-    if not baseurl_match:
-        print("❌ baseurls bulunamadı.")
-        return
 
-    urls_text = baseurl_match.group(1).replace('"', '').replace("'", "").replace("\n", "").replace("\r", "")
-    servers = [url.strip() for url in urls_text.split(',') if url.strip().startswith("http")]
-    servers = list(set(servers))
-    
-    if not servers:
-        print("❌ Sunucu listesi boş.")
-        return
+def find_in_js(driver):
+    try:
+        result = driver.execute_script("""
+            var found = null;
+            document.querySelectorAll('video, source').forEach(function(el) {
+                if (!found && el.src && el.src.indexOf('.m3u8') !== -1) found = el.src;
+                if (!found && el.currentSrc && el.currentSrc.indexOf('.m3u8') !== -1) found = el.currentSrc;
+            });
+            if (found) return found;
 
-    print(f"📡 Bulunan Sunucular: {servers}")
+            try {
+                if (window.hls && window.hls.url) return window.hls.url;
+            } catch(e) {}
 
-    # Bulunan sunuculardan hangisinin aktif yayın verdiğini test et
-    working_server = None
-    test_id = "androstreamlivebs1"
-    
-    for server in servers:
-        server = server.rstrip('/')
-        test_url = f"{server}/{test_id}.m3u8" if "checklist" in server else f"{server}/checklist/{test_id}.m3u8"
-        test_url = test_url.replace("checklist//", "checklist/")
+            try {
+                var jw = jwplayer();
+                if (jw && jw.getPlaylistItem()) return jw.getPlaylistItem().file;
+            } catch(e) {}
+
+            var m = document.documentElement.innerHTML.match(/https?:\\\\?\\/\\\\?\\/[^\\s'\"<>]+\\.m3u8(?:\\?[^\\s'\"<>]*)?/i);
+            return m ? m[0] : null;
+        """)
+        return clean_m3u8(result)
+    except Exception:
+        return None
+
+
+def handle_iframes(driver):
+    try:
+        iframes = driver.find_elements(By.TAG_NAME, "iframe")
+        for idx, iframe in enumerate(iframes):
+            try:
+                driver.switch_to.frame(iframe)
+                close_popups_and_play(driver)
+                url = find_in_js(driver)
+                driver.switch_to.default_content()
+                if url:
+                    return url
+            except Exception:
+                driver.switch_to.default_content()
+    except Exception:
+        pass
+    return None
+
+
+def scrape_page(driver, page):
+    url = f"{BASE_URL}/{page['slug']}"
+    log.info(f"\n🔍 {page['name']} aranıyor...")
+
+    if WIRE:
         try:
-            temp_response = requests.get(test_url, headers={'Referer': active_site + "/"}, verify=False, timeout=5)
-            if temp_response.status_code == 200:
-                working_server = server
-                break
-        except:
-            continue
+            del driver.requests
+        except Exception:
+            pass
 
-    if not working_server:
-        print("❌ Çalışan sunucu bağlantısı bulunamadı.")
-        return
+    try:
+        driver.get(url)
+        WebDriverWait(driver, BODY_WAIT).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+    except Exception as e:
+        log.warning(f"  ⚠️ Sayfa gecikmesi: {e}")
 
-    print(f"🔥 Aktif Sunucu Seçildi: {working_server}")
+    time.sleep(0.5)
+    close_popups_and_play(driver)
 
-    # Kanalları Emu klasörüne yazdır
-    count = 0
-    working_server = working_server.rstrip('/')
-    
-    for cid in CHANNELS:
-        # Link yapısını kur
-        furl = f"{working_server}/{cid}.m3u8" if "checklist" in working_server else f"{working_server}/checklist/{cid}.m3u8"
-        furl = furl.replace("checklist//", "checklist/")
-        
-        # Oynatıcılar için referer satırı ekleyelim (Yayınların kapanmaması için önemli)
-        referer_line = f"#EXTVLCOPT:http-referrer={active_site}/"
-        
-        # Dosya içeriği (Proxy yok, Header ve Direkt Link)
-        file_content = f"{M3U8_HEADER}\n{referer_line}\n{furl}"
-        file_path = os.path.join(OUTPUT_FOLDER, f"{cid}.m3u8")
-        
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(file_content)
-        count += 1
+    # 1. JS Kontrolü
+    m3u8_url = find_in_js(driver)
 
-    print(f"🏁 Tamamlandı! {count} dosya '{OUTPUT_FOLDER}' klasörüne oluşturuldu.")
+    # 2. Network İzleme
+    if not m3u8_url:
+        deadline = time.time() + STREAM_WAIT
+        while time.time() < deadline and not m3u8_url:
+            if WIRE:
+                try:
+                    for r in reversed(driver.requests):
+                        cleaned = clean_m3u8(r.url)
+                        if cleaned:
+                            m3u8_url = cleaned
+                            break
+                except Exception:
+                    pass
+            if not m3u8_url:
+                time.sleep(POLL_INTERVAL)
+
+    # 3. Iframe Kontrolü
+    if not m3u8_url:
+        m3u8_url = handle_iframes(driver)
+
+    if m3u8_url:
+        log.info(f"  ✅ BULUNDU: {m3u8_url}")
+    else:
+        log.warning(f"  ❌ M3U8 bulunamadı!")
+
+    return m3u8_url
+
+
+# ═══════════════════════════════════════════════════════
+#  MAIN DÖNGÜSÜ
+# ═══════════════════════════════════════════════════════
+def main():
+    log.info("=" * 55)
+    log.info("   M3U8 Scraper Başlatıldı")
+    log.info(f"   Base URL : {BASE_URL}")
+    log.info(f"   Toplam   : {len(PAGES)} sayfa")
+    log.info("=" * 55)
+
+    start = time.time()
+    driver = None
+    channels = []
+
+    try:
+        driver = get_driver()
+
+        for i, page in enumerate(PAGES, 1):
+            log.info(f"[{i}/{len(PAGES)}] İşleniyor: {page['name']}")
+            m3u8_url = scrape_page(driver, page)
+
+            if m3u8_url:
+                channels.append({
+                    "name": page["name"],
+                    "url": m3u8_url,
+                    "group": page["group"],
+                })
+                # 🔥 ANLIK KAYIT: Her bulunan kanal anında diske yazılır
+                save_playlist(channels, elapsed=round(time.time() - start, 1))
+
+            time.sleep(0.3)
+
+    except Exception as e:
+        log.error(f"❌ Beklenmedik Hata: {e}", exc_info=True)
+
+    finally:
+        if driver:
+            try:
+                driver.quit()
+                log.info("🔒 Driver kapatıldı")
+            except Exception:
+                pass
+
+    elapsed = round(time.time() - start, 1)
+    save_playlist(channels, elapsed=elapsed)
+
+    log.info(f"\n{'='*55}")
+    log.info(f"🏁 Bitti! Toplam: {len(channels)} / {len(PAGES)} kanal yazıldı.")
+    log.info(f"📁 Dosya: {OUTPUT_FILE}")
+    log.info(f"⏱️ Süre : {elapsed}s")
+    log.info(f"{'='*55}")
+
 
 if __name__ == "__main__":
     main()

@@ -15,7 +15,7 @@ HEADERS = {
 }
 
 OUTPUT_FILENAME = "playlist.m3u"
-STATIC_LOGO = "https://i.hizliresim.com/8xzjgqv.jpg"
+
 
 def get_andro_content():
     print("--- Andro Panel Taraması Başlatıldı ---")
@@ -73,7 +73,7 @@ def get_andro_content():
             return None
         return None
 
-    print("Aktif domain aranıyor (10-99)...")
+    print("Aktif domain aranıyor (50-99)...")
     active_site = None
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         futures = [executor.submit(check_domain, i) for i in range(10, 100)]

@@ -5,6 +5,7 @@ import warnings
 import os
 import concurrent.futures
 
+# Sertifika uyarılarını kapatmak için
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 warnings.filterwarnings('ignore')
 
@@ -14,14 +15,14 @@ HEADERS = {
 }
 
 OUTPUT_FILENAME = "playlist.m3u"
-STATIC_LOGO = "https://i.hizliresim.com/6d22jbw.gif"
+STATIC_LOGO = "https://i.hizliresim.com/8xzjgqv.jpg"
 
 def get_andro_content():
-    print("--- Andro Panel ---")
+    print("--- Andro Panel Taraması Başlatıldı ---")
     results = []
     base_pattern = "https://mahsunsports{}.xyz"
     headers = HEADERS.copy()
-
+    
     channels = [
         ("androstreamlivebiraz1", 'TR:beIN Sport 1 HD'),
         ("androstreamlivebs1", 'TR:beIN Sport 1 HD'),
@@ -42,16 +43,7 @@ def get_andro_content():
         ("androstreamlivesm2", 'TR:Smart Sport 2 HD'),
         ("androstreamlivees1", 'TR:Euro Sport 1 HD'),
         ("androstreamlivees2", 'TR:Euro Sport 2 HD'),
-        ("androstreamliveexn", 'TR:Exxen HD'),
-        ("androstreamliveexn1", 'TR:Exxen 1 HD'),
-        ("androstreamliveexn2", 'TR:Exxen 2 HD'),
-        ("androstreamliveexn3", 'TR:Exxen 3 HD'),
-        ("androstreamliveexn4", 'TR:Exxen 4 HD'),
-        ("androstreamliveexn5", 'TR:Exxen 5 HD'),
-        ("androstreamliveexn6", 'TR:Exxen 6 HD'),
-        ("androstreamliveexn7", 'TR:Exxen 7 HD'),
-        ("androstreamliveexn8", 'TR:Exxen 8 HD'),
-        ("androstreamlivelivetb", 'TR:Tabii HD'),
+        ("androstreamlivetb", 'TR:Tabii HD'),
         ("androstreamlivetb1", 'TR:Tabii 1 HD'),
         ("androstreamlivetb2", 'TR:Tabii 2 HD'),
         ("androstreamlivetb3", 'TR:Tabii 3 HD'),
@@ -60,6 +52,15 @@ def get_andro_content():
         ("androstreamlivetb6", 'TR:Tabii 6 HD'),
         ("androstreamlivetb7", 'TR:Tabii 7 HD'),
         ("androstreamlivetb8", 'TR:Tabii 8 HD'),
+        ("androstreamliveexn", 'TR:Exxen HD'),
+        ("androstreamliveexn1", 'TR:Exxen 1 HD'),
+        ("androstreamliveexn2", 'TR:Exxen 2 HD'),
+        ("androstreamliveexn3", 'TR:Exxen 3 HD'),
+        ("androstreamliveexn4", 'TR:Exxen 4 HD'),
+        ("androstreamliveexn5", 'TR:Exxen 5 HD'),
+        ("androstreamliveexn6", 'TR:Exxen 6 HD'),
+        ("androstreamliveexn7", 'TR:Exxen 7 HD'),
+        ("androstreamliveexn8", 'TR:Exxen 8 HD')
     ]
 
     def check_domain(index):
@@ -72,7 +73,7 @@ def get_andro_content():
             return None
         return None
 
-    print("Andro Panel icin aktif domain araniyor (10-99)...")
+    print("Aktif domain aranıyor (10-99)...")
     active_site = None
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         futures = [executor.submit(check_domain, i) for i in range(10, 100)]
@@ -80,33 +81,30 @@ def get_andro_content():
             result = future.result()
             if result:
                 active_site = result
-                executor.shutdown(wait=False, cancel_futures=True)
                 break
-
+    
     if not active_site:
-        print("Andro Panel: 10 ile 99 arasinda aktif site bulunamadi.")
+        print("Aktif site bulunamadı.")
         return results
 
-    print(f"Andro Panel Guncel Domain Bulundu: {active_site}")
+    print(f"Bulunan Domain: {active_site}")
     event_url = f"{active_site}/event.html?id=androstreamlivebs1"
-    print(f"Event sayfasi kontrol ediliyor: {event_url}")
-
+    
     try:
         r2 = requests.get(event_url, headers=headers, verify=False, timeout=10)
         h2_text = r2.text
     except Exception as e:
-        print(f"Andro Panel: Event sayfasi alinamadi. Hata: {e}")
+        print(f"Event sayfası hatası: {e}")
         return results
 
     baseurl_match = re.search(r'baseurls\s*=\s*\[(.*?)\]', h2_text, re.DOTALL | re.IGNORECASE)
     if not baseurl_match:
-        print("Andro Panel: baseurls dizisi event sayfasinda bulunamadi.")
+        print("Sunucu adresleri bulunamadı.")
         return results
 
     urls_text = baseurl_match.group(1).replace('"', '').replace("'", "").replace("\n", "").replace("\r", "")
     servers = [url.strip() for url in urls_text.split(',') if url.strip().startswith("http")]
     servers = list(set(servers))
-    print(f"Bulunan Sunucular: {servers}")
 
     active_servers = []
     test_id = "androstreamlivebs1"
@@ -126,29 +124,22 @@ def get_andro_content():
         for cid, cname in channels:
             final_url = f"{server}/{cid}.m3u8" if "checklist" in server else f"{server}/checklist/{cid}.m3u8"
             final_url = final_url.replace("checklist//", "checklist/")
-            entry = f'#EXTINF:-1 tvg-logo="{STATIC_LOGO}" group-title="umitm0d", {cname}\n#EXTVLCOPT:http-referrer={active_site}/\n{final_url}'
+            entry = f'#EXTINF:-1 tvg-logo="{STATIC_LOGO}" group-title="Andro-Panel", {cname}\n#EXTVLCOPT:http-referrer={active_site}/\n{final_url}'
             results.append(entry)
-
+            
     return results
 
-
 def main():
-    print("Ümitm0d AndroTV Bot Başladı...")
+    print("İşlem Başladı...")
     all_content = ["#EXTM3U"]
     all_content.extend(get_andro_content())
-
+    
     try:
         with open(OUTPUT_FILENAME, "w", encoding="utf-8") as f:
             f.write("\n".join(all_content))
-        full_path = os.path.abspath(OUTPUT_FILENAME)
-        total_channels = len(all_content) - 1
-        print("\nTamamlandı!")
-        print(f"Dosya: {OUTPUT_FILENAME}")
-        print(f"Kanal Sayısı: {total_channels}")
-        print(f"Yol: {full_path}")
+        print(f"\nBaşarılı! {len(all_content)-1} kanal kaydedildi.")
     except IOError as e:
         print(f"\nHata: {e}")
-
 
 if __name__ == "__main__":
     main()

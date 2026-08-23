@@ -13,7 +13,7 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
 }
 
-OUTPUT_FILENAME = "umitm0d.m3u"
+OUTPUT_FILENAME = "playlist.m3u"
 STATIC_LOGO = "https://i.hizliresim.com/6d22jbw.gif"
 
 def get_andro_content():

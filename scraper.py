@@ -15,11 +15,20 @@ HEADERS = {
 }
 
 OUTPUT_FILENAME = "playlist.m3u"
+CHANNELS_DIR = "channels"
+
+
+def sanitize_filename(name):
+    """Dosya adı için geçersiz karakterleri temizler"""
+    name = re.sub(r'[<>:"/\\|?*]', '_', name)
+    name = name.replace(' ', '_').replace(':', '_')
+    return name.strip('_')
 
 
 def get_andro_content():
     print("--- Andro Panel Taraması Başlatıldı ---")
     results = []
+    channel_files = []  # (kanal_adı, referer, stream_url) tuple listesi
     base_pattern = "https://mahsunsports{}.xyz"
     headers = HEADERS.copy()
     
@@ -85,7 +94,7 @@ def get_andro_content():
     
     if not active_site:
         print("Aktif site bulunamadı.")
-        return results
+        return results, channel_files
 
     print(f"Bulunan Domain: {active_site}")
     event_url = f"{active_site}/event.html?id=androstreamlivebs1"
@@ -95,12 +104,12 @@ def get_andro_content():
         h2_text = r2.text
     except Exception as e:
         print(f"Event sayfası hatası: {e}")
-        return results
+        return results, channel_files
 
     baseurl_match = re.search(r'baseurls\s*=\s*\[(.*?)\]', h2_text, re.DOTALL | re.IGNORECASE)
     if not baseurl_match:
         print("Sunucu adresleri bulunamadı.")
-        return results
+        return results, channel_files
 
     urls_text = baseurl_match.group(1).replace('"', '').replace("'", "").replace("\n", "").replace("\r", "")
     servers = [url.strip() for url in urls_text.split(',') if url.strip().startswith("http")]
@@ -126,20 +135,72 @@ def get_andro_content():
             final_url = final_url.replace("checklist//", "checklist/")
             entry = f'#EXTINF:-1 tvg-logo="" group-title="Mahsun Sport", {cname}\n#EXTVLCOPT:http-referrer={active_site}/\n{final_url}'
             results.append(entry)
+            channel_files.append((cname, active_site, final_url))
             
-    return results
+    return results, channel_files
+
+
+def save_individual_channels(channel_files):
+    """Her kanal için ayrı bir m3u8 dosyası oluşturur/günceller"""
+    if not channel_files:
+        print("Kaydedilecek kanal bulunamadı.")
+        return
+    
+    # Klasör yoksa oluştur
+    if not os.path.exists(CHANNELS_DIR):
+        os.makedirs(CHANNELS_DIR)
+        print(f"'{CHANNELS_DIR}' klasörü oluşturuldu.")
+    
+    saved_count = 0
+    seen_names = {}  # Aynı isimde birden fazla server olursa numaralandır
+    
+    for cname, referer, stream_url in channel_files:
+        safe_name = sanitize_filename(cname)
+        
+        # Aynı isimde dosya varsa sunucu numarası ekle
+        if safe_name in seen_names:
+            seen_names[safe_name] += 1
+            filename = f"{safe_name}_srv{seen_names[safe_name]}.m3u8"
+        else:
+            seen_names[safe_name] = 1
+            filename = f"{safe_name}.m3u8"
+        
+        filepath = os.path.join(CHANNELS_DIR, filename)
+        
+        content = (
+            "#EXTM3U\n"
+            f'#EXTINF:-1 tvg-logo="" group-title="Mahsun Sport", {cname}\n'
+            f"#EXTVLCOPT:http-referrer={referer}/\n"
+            f"#EXTVLCOPT:http-user-agent={HEADERS['User-Agent']}\n"
+            f"{stream_url}\n"
+        )
+        
+        try:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+            saved_count += 1
+        except IOError as e:
+            print(f"Hata ({filename}): {e}")
+    
+    print(f"{saved_count} adet bireysel m3u8 dosyası '{CHANNELS_DIR}' klasörüne kaydedildi/güncellendi.")
+
 
 def main():
     print("İşlem Başladı...")
     all_content = ["#EXTM3U"]
-    all_content.extend(get_andro_content())
+    entries, channel_files = get_andro_content()
+    all_content.extend(entries)
     
     try:
         with open(OUTPUT_FILENAME, "w", encoding="utf-8") as f:
             f.write("\n".join(all_content))
-        print(f"\nBaşarılı! {len(all_content)-1} kanal kaydedildi.")
+        print(f"\nBaşarılı! {len(all_content)-1} kanal '{OUTPUT_FILENAME}' dosyasına kaydedildi.")
     except IOError as e:
         print(f"\nHata: {e}")
+    
+    # Her kanal için ayrı m3u8 dosyalarını oluştur/güncelle
+    save_individual_channels(channel_files)
+
 
 if __name__ == "__main__":
     main()

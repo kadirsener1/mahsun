@@ -24,7 +24,7 @@ def get_andro_content():
     headers = HEADERS.copy()
     
     channels = [
-        ("androstreamlivebiraz1", 'TR:beIN Sport 1 HD'),
+        ("androstreamlivebiraz1", 'TR:beIN Sport 1 HD-Mahsun'),
         ("androstreamlivebs1", 'TR:beIN Sport 1 HD'),
         ("androstreamlivebs2", 'TR:beIN Sport 2 HD'),
         ("androstreamlivebs3", 'TR:beIN Sport 3 HD'),

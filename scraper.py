@@ -20,7 +20,6 @@ OUTPUT_FILE    = "playlist.m3u"
 STATS_FILE     = "stats.json"
 CHROMEDRIVER   = os.environ.get("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
 CHROME_BIN     = os.environ.get("CHROME_BIN", "/usr/bin/google-chrome")
-REMOTE_PLAYLIST_URL = "https://raw.githubusercontent.com/kadirsener1/avva/refs/heads/main/playlist.m3u"
 
 # ── Logging ───────────────────────────────────────────
 os.makedirs("logs", exist_ok=True)
@@ -654,79 +653,24 @@ def scrape_page(driver, page):
 
 
 # ═══════════════════════════════════════════════════════
-#  GÜNCELLEME VE GİTHUB LİSTESİYLE BİRLEŞTİRME KISMI
+#  M3U OLUŞTUR
 # ═══════════════════════════════════════════════════════
-def merge_and_update_playlist(channels):
-    """
-    Taranan yeni kanalları alır, GitHub'daki orijinal playlist dosyasını indirir.
-    Orijinal listenin düzenini ve sıralamasını bozmadan sadece eşleşenleri günceller.
-    """
-    if not channels:
-        log.warning("⚠️ Güncellenecek taranmış kanal bulunamadı.")
-        return
-
-    # Taranan kanalları kolay arama için sözlüğe çevir (İsim -> Link)
-    yeni_bulunan_linkler = {ch["name"]: ch["url"] for ch in channels}
-
-    log.info(f"📥 Orijinal playlist indiriliyor: {REMOTE_PLAYLIST_URL}")
-    try:
-        response = req_lib.get(REMOTE_PLAYLIST_URL, timeout=15)
-        response.raise_for_status()
-        # Satır sonu karakterlerini normalize et
-        playlist_lines = response.text.replace("\r\n", "\n").split("\n")
-    except Exception as e:
-        log.error(f"❌ Orijinal playlist indirilemedi! Detay: {e}")
-        return
-
-    guncellenmis_satirlar = []
-    i = 0
-    toplam_satir = len(playlist_lines)
-    guncelleme_sayisi = 0
-
-    log.info("⚡ Playlist güncelleniyor (Sıralama ve şablon kesinlikle korunuyor)...")
-
-    while i < toplam_satir:
-        satir = playlist_lines[i]
-
-        # Satır #EXTINF ile başlıyorsa kanal bilgisidir
-        if satir.startswith("#EXTINF"):
-            guncellenmis_satirlar.append(satir)  # Orijinal meta veriyi (logo, grup vb.) koru
-
-            # Kanal adını virgülden sonraki kısımdan çek (Örn: ...,Kanal D)
-            kanal_adi = ""
-            if "," in satir:
-                kanal_adi = satir.split(",")[-1].strip()
-
-            # Bir sonraki satırın varlığını ve URL olup olmadığını kontrol et
-            if i + 1 < toplam_satir:
-                sonraki_satir = playlist_lines[i + 1]
-
-                # Eğer bir sonraki satır gerçekten link ise (yorum veya boşluk değilse)
-                if not sonraki_satir.startswith("#") and sonraki_satir.strip():
-                    # Taramadan gelen yeni listemizde bu kanal ismi birebir var mı?
-                    if kanal_adi in yeni_bulunan_linkler:
-                        yeni_link = yeni_bulunan_linkler[kanal_adi].strip()
-                        guncellenmis_satirlar.append(yeni_link)  # Linki yenisiyle değiştir
-                        log.info(f"   🔄 Güncellendi: {kanal_adi} -> {yeni_link}")
-                        guncelleme_sayisi += 1
-                    else:
-                        guncellenmis_satirlar.append(sonraki_satir)  # Eşleşme yoksa eski linki aynen koru
-                    
-                    i += 2  # EXTINF ve URL satırını geçtiğimiz için 2 adım atla
-                    continue
-
-        # Diğer tüm satırları (#EXTM3U başlığı, boşluklar vb.) aynen koru
-        guncellenmis_satirlar.append(satir)
-        i += 1
-
-    # Birleştirilmiş listeyi playlist.m3u olarak kaydet
-    try:
-        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-            f.write("\n".join(guncellenmis_satirlar))
-        log.info(f"💾 Birleştirilmiş playlist '{OUTPUT_FILE}' dosyasına başarıyla kaydedildi!")
-        log.info(f"📊 Toplam {guncelleme_sayisi} kanal güncellendi.")
-    except Exception as e:
-        log.error(f"❌ '{OUTPUT_FILE}' yazılırken hata oluştu: {e}")
+def create_m3u(channels):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lines = [
+        "#EXTM3U\n",
+        f"# Site      : mahsunsports\n",
+        f"# Güncelleme: {now}\n",
+        f"# Toplam    : {len(channels)} kanal\n\n",
+    ]
+    for ch in channels:
+        extinf  = '#EXTINF:-1'
+        extinf += f' tvg-name="{ch["name"]}"'
+        extinf += f' group-title="{ch["group"]}"'
+        extinf += f',{ch["name"]}\n'
+        lines.append(extinf)
+        lines.append(f'{ch["url"]}\n\n')
+    return "".join(lines)
 
 
 # ═══════════════════════════════════════════════════════
@@ -774,13 +718,14 @@ def main():
     elapsed = round(time.time() - start, 1)
 
     log.info(f"\n{'='*55}")
-    log.info(f"🏁 Tarama Tamamlandı!")
-    log.info(f"📺 Taranıp Bulunan : {len(channels)} / {len(PAGES)}")
-    log.info(f"⏱️  Tarama Süresi   : {elapsed}s")
+    log.info(f"🏁 Tamamlandı!")
+    log.info(f"📺 Bulunan : {len(channels)} / {len(PAGES)}")
+    log.info(f"⏱️  Süre    : {elapsed}s")
     log.info(f"{'='*55}")
 
-    # GitHub listesini indirip, sadece eşleşenleri güncelleyerek tek dosyaya kaydeder
-    merge_and_update_playlist(channels)
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(create_m3u(channels))
+    log.info(f"✅ {OUTPUT_FILE} kaydedildi")
 
     with open(STATS_FILE, "w", encoding="utf-8") as f:
         json.dump({

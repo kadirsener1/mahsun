@@ -1,38 +1,26 @@
-name: Mahsun Update List son
-
+name: Update List
 on:
   schedule:
-    - cron: '0 0 * * *' # Her gece 00:00'da (UTC) otomatik çalışır
-  workflow_dispatch:     # GitHub panelinden manuel çalıştırma butonu
-
-permissions:
-  contents: write        # Değişiklikleri repoya push yapabilmek için gerekli izin
+    - cron: '0 0 * * *' # Her gece çalışır
+  workflow_dispatch: # Manuel çalıştırma butonu ekler
 
 jobs:
-  scrape-and-update:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.11'
-          cache: 'pip'
-
+          python-version: '3.x'
       - name: Install dependencies
+        run: pip install requests
+      - name: Run script
+        run: python tv.py
+      - name: Commit and push
         run: |
-          python -m pip install --upgrade pip
-          pip install requests selenium selenium-wire webdriver-manager
-
-      - name: Run Scraper Script
-        run: python scraper.py
-
-      - name: Commit and push changes
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add playlist.m3u stats.json
-          git diff --staged --quiet || (git commit -m "Playlist güncellendi [skip ci]" && git push)
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add mahsun.m3u
+          git commit -m "Liste Güncellendi" || exit 0
+          git push

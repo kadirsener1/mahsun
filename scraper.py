@@ -1,205 +1,81 @@
 import requests
-import re
-import urllib3
-import warnings
-import os
-import concurrent.futures
 
-# Sertifika uyarılarını kapatmak için
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-warnings.filterwarnings('ignore')
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-}
-
-OUTPUT_FILENAME = "playlist.m3u"
-CHANNELS_DIR = "channels"
-
-
-def sanitize_filename(name):
-    """Dosya adı için geçersiz karakterleri temizler"""
-    name = re.sub(r'[<>:"/\\|?*]', '_', name)
-    name = name.replace(' ', '_').replace(':', '_')
-    return name.strip('_')
-
-
-def get_andro_content():
-    print("--- Andro Panel Taraması Başlatıldı ---")
-    results = []
-    channel_files = []  # (kanal_adı, referer, stream_url) tuple listesi
-    base_pattern = "https://mahsunsports{}.xyz"
-    headers = HEADERS.copy()
-    
-    channels = [
-        ("androstreamlivebiraz1", 'TR:beIN Sport 1 HD-Mahsun'),
-        ("androstreamlivebs1", 'TR:beIN Sport 1 HD'),
-        ("androstreamlivebs2", 'TR:beIN Sport 2 HD'),
-        ("androstreamlivebs3", 'TR:beIN Sport 3 HD'),
-        ("androstreamlivebs4", 'TR:beIN Sport 4 HD'),
-        ("androstreamlivebs5", 'TR:beIN Sport 5 HD'),
-        ("androstreamlivebsm1", 'TR:beIN Sport Max 1 HD'),
-        ("androstreamlivebsm2", 'TR:beIN Sport Max 2 HD'),
-        ("androstreamlivess1", 'TR:S Sport 1 HD'),
-        ("androstreamlivess2", 'TR:S Sport 2 HD'),
-        ("androstreamlivets", 'TR:Tivibu Sport HD'),
-        ("androstreamlivets1", 'TR:Tivibu Sport 1 HD'),
-        ("androstreamlivets2", 'TR:Tivibu Sport 2 HD'),
-        ("androstreamlivets3", 'TR:Tivibu Sport 3 HD'),
-        ("androstreamlivets4", 'TR:Tivibu Sport 4 HD'),
-        ("androstreamlivesm1", 'TR:Smart Sport 1 HD'),
-        ("androstreamlivesm2", 'TR:Smart Sport 2 HD'),
-        ("androstreamlivees1", 'TR:Euro Sport 1 HD'),
-        ("androstreamlivees2", 'TR:Euro Sport 2 HD'),
-        ("androstreamlivetb", 'TR:Tabii HD'),
-        ("androstreamlivetb1", 'TR:Tabii 1 HD'),
-        ("androstreamlivetb2", 'TR:Tabii 2 HD'),
-        ("androstreamlivetb3", 'TR:Tabii 3 HD'),
-        ("androstreamlivetb4", 'TR:Tabii 4 HD'),
-        ("androstreamlivetb5", 'TR:Tabii 5 HD'),
-        ("androstreamlivetb6", 'TR:Tabii 6 HD'),
-        ("androstreamlivetb7", 'TR:Tabii 7 HD'),
-        ("androstreamlivetb8", 'TR:Tabii 8 HD'),
-        ("androstreamliveexn", 'TR:Exxen HD'),
-        ("androstreamliveexn1", 'TR:Exxen 1 HD'),
-        ("androstreamliveexn2", 'TR:Exxen 2 HD'),
-        ("androstreamliveexn3", 'TR:Exxen 3 HD'),
-        ("androstreamliveexn4", 'TR:Exxen 4 HD'),
-        ("androstreamliveexn5", 'TR:Exxen 5 HD'),
-        ("androstreamliveexn6", 'TR:Exxen 6 HD'),
-        ("androstreamliveexn7", 'TR:Exxen 7 HD'),
-        ("androstreamliveexn8", 'TR:Exxen 8 HD')
-    ]
-
-    def check_domain(index):
-        url = base_pattern.format(index)
-        try:
-            response = requests.get(url, headers=headers, timeout=5, verify=False)
-            if response.status_code == 200:
-                return url
-        except:
-            return None
-        return None
-
-    print("Aktif domain aranıyor (50-99)...")
-    active_site = None
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-        futures = [executor.submit(check_domain, i) for i in range(10, 100)]
-        for future in concurrent.futures.as_completed(futures):
-            result = future.result()
-            if result:
-                active_site = result
-                break
-    
-    if not active_site:
-        print("Aktif site bulunamadı.")
-        return results, channel_files
-
-    print(f"Bulunan Domain: {active_site}")
-    event_url = f"{active_site}/event.html?id=androstreamlivebs1"
-    
-    try:
-        r2 = requests.get(event_url, headers=headers, verify=False, timeout=10)
-        h2_text = r2.text
-    except Exception as e:
-        print(f"Event sayfası hatası: {e}")
-        return results, channel_files
-
-    baseurl_match = re.search(r'baseurls\s*=\s*\[(.*?)\]', h2_text, re.DOTALL | re.IGNORECASE)
-    if not baseurl_match:
-        print("Sunucu adresleri bulunamadı.")
-        return results, channel_files
-
-    urls_text = baseurl_match.group(1).replace('"', '').replace("'", "").replace("\n", "").replace("\r", "")
-    servers = [url.strip() for url in urls_text.split(',') if url.strip().startswith("http")]
-    servers = list(set(servers))
-
-    active_servers = []
-    test_id = "androstreamlivebs1"
-    for server in servers:
-        server = server.rstrip('/')
-        test_url = f"{server}/{test_id}.m3u8" if "checklist" in server else f"{server}/checklist/{test_id}.m3u8"
-        test_url = test_url.replace("checklist//", "checklist/")
-        try:
-            temp_response = requests.get(test_url, headers={'Referer': active_site + "/"}, verify=False, timeout=5)
-            if temp_response.status_code == 200:
-                active_servers.append(server)
-        except:
-            continue
-
-    for server in active_servers:
-        server = server.rstrip('/')
-        for cid, cname in channels:
-            final_url = f"{server}/{cid}.m3u8" if "checklist" in server else f"{server}/checklist/{cid}.m3u8"
-            final_url = final_url.replace("checklist//", "checklist/")
-            entry = f'#EXTINF:-1 tvg-logo="" group-title="Mahsun Sport", {cname}\n#EXTVLCOPT:http-referrer={active_site}/\n{final_url}'
-            results.append(entry)
-            channel_files.append((cname, active_site, final_url))
-            
-    return results, channel_files
-
-
-def save_individual_channels(channel_files):
-    """Her kanal için ayrı bir m3u8 dosyası oluşturur/günceller"""
-    if not channel_files:
-        print("Kaydedilecek kanal bulunamadı.")
-        return
-    
-    # Klasör yoksa oluştur
-    if not os.path.exists(CHANNELS_DIR):
-        os.makedirs(CHANNELS_DIR)
-        print(f"'{CHANNELS_DIR}' klasörü oluşturuldu.")
-    
-    saved_count = 0
-    seen_names = {}  # Aynı isimde birden fazla server olursa numaralandır
-    
-    for cname, referer, stream_url in channel_files:
-        safe_name = sanitize_filename(cname)
-        
-        # Aynı isimde dosya varsa sunucu numarası ekle
-        if safe_name in seen_names:
-            seen_names[safe_name] += 1
-            filename = f"{safe_name}_srv{seen_names[safe_name]}.m3u8"
-        else:
-            seen_names[safe_name] = 1
-            filename = f"{safe_name}.m3u8"
-        
-        filepath = os.path.join(CHANNELS_DIR, filename)
-        
-        content = (
-            "#EXTM3U\n"
-            f'#EXTINF:-1 tvg-logo="" group-title="Mahsun Sport", {cname}\n'
-            f"#EXTVLCOPT:http-referrer={referer}/\n"
-            f"#EXTVLCOPT:http-user-agent={HEADERS['User-Agent']}\n"
-            f"{stream_url}\n"
-        )
-        
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write(content)
-            saved_count += 1
-        except IOError as e:
-            print(f"Hata ({filename}): {e}")
-    
-    print(f"{saved_count} adet bireysel m3u8 dosyası '{CHANNELS_DIR}' klasörüne kaydedildi/güncellendi.")
+# 1. GITHUB'DAKİ ORİJİNAL PLAYLIST URL'Sİ
+REMOTE_PLAYLIST_URL = "https://raw.githubusercontent.com/kadirsener1/avva/refs/heads/main/playlist.m3u"
 
 
 def main():
-    print("İşlem Başladı...")
-    all_content = ["#EXTM3U"]
-    entries, channel_files = get_andro_content()
-    all_content.extend(entries)
-    
+    # ----------------- KANAL BULMA / TARAMA KISMI -----------------
+    # Kendi kodunuzda kanalları bulup link ürettiğiniz kısım burasıdır.
+    # Burada amaç; kanal adını KEY, yeni linki VALUE olarak bir dict içinde toplamak.
+    # Örnek (Kendi kodunuza göre burayı güncelleyin):
+    yeni_kanallar = {
+        "Kanal D": "http://yeni-link-kanald.m3u8",
+        "Star TV": "http://yeni-link-startv.m3u8",
+        "TRT 1": "http://yeni-link-trt1.m3u8",
+        # Kendi tarama algoritmanızdan gelen verileri buraya doldurun.
+    }
+    # --------------------------------------------------------------
+
+    print("GitHub'daki orijinal playlist indiriliyor...")
     try:
-        with open(OUTPUT_FILENAME, "w", encoding="utf-8") as f:
-            f.write("\n".join(all_content))
-        print(f"\nBaşarılı! {len(all_content)-1} kanal '{OUTPUT_FILENAME}' dosyasına kaydedildi.")
-    except IOError as e:
-        print(f"\nHata: {e}")
-    
-    # Her kanal için ayrı m3u8 dosyalarını oluştur/güncelle
-    save_individual_channels(channel_files)
+        response = requests.get(REMOTE_PLAYLIST_URL)
+        response.raise_for_status()
+        # Satır sonu karakterlerine göre listeye bölüyoruz
+        playlist_lines = response.text.splitlines()
+    except Exception as e:
+        print(f"Hata: GitHub listesi indirilemedi! {e}")
+        return
+
+    guncellenmis_satirlar = []
+    i = 0
+    toplam_satir = len(playlist_lines)
+
+    print("Playlist güncelleniyor (Sıralama ve düzen korunuyor)...")
+
+    while i < toplam_satir:
+        satir = playlist_lines[i]
+
+        # Eğer satır #EXTINF ile başlıyorsa kanal bilgisini içeriyordur
+        if satir.startswith("#EXTINF"):
+            guncellenmis_satirlar.append(satir)  # Meta veri satırını aynen koru
+
+            # Kanal adını virgülden sonraki kısımdan çekiyoruz (Örn: ...,Kanal D)
+            kanal_adi = ""
+            if "," in satir:
+                kanal_adi = satir.split(",")[-1].strip()
+
+            # Bir sonraki satırın varlığını kontrol et (Bu satır kanalın URL'sidir)
+            if i + 1 < toplam_satir:
+                sonraki_satir = playlist_lines[i + 1]
+
+                # Eğer sonraki satır bir URL ise (yorum satırı veya boşluk değilse)
+                if not sonraki_satir.startswith("#") and sonraki_satir.strip():
+                    # Kanal ismi bizim yeni listemizde var mı? (Birebir uyum kontrolü)
+                    if kanal_adi in yeni_kanallar:
+                        # Eşleşme bulundu! Eski link yerine yenisini ekle
+                        yeni_link = yeni_kanallar[kanal_adi]
+                        guncellenmis_satirlar.append(yeni_link)
+                        print(f"Güncellendi: {kanal_adi}")
+                    else:
+                        # Eşleşme yoksa eski linki aynen koru
+                        guncellenmis_satirlar.append(sonraki_satir)
+
+                    i += 2  # Hem EXTINF hem URL satırını işlediğimiz için 2 adım atla
+                    continue
+
+        # #EXTINF dışındaki satırları (#EXTM3U başlığı, boş satırlar vb.) aynen koru
+        guncellenmis_satirlar.append(satir)
+        i += 1
+
+    # 2. TEK BİR playlist.m3u DOSYASI OLARAK KAYDETME
+    dosya_adi = "playlist.m3u"
+    try:
+        with open(dosya_adi, "w", encoding="utf-8") as f:
+            f.write("\n".join(guncellenmis_satirlar))
+        print(f"İşlem tamamlandı! '{dosya_adi}' başarıyla oluşturuldu.")
+    except Exception as e:
+        print(f"Dosya yazılırken hata oluştu: {e}")
 
 
 if __name__ == "__main__":

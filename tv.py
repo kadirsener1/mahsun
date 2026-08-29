@@ -14,7 +14,7 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
 }
 
-OUTPUT_FILENAME = "DeaTHlesS-Androtv.m3u"
+OUTPUT_FILENAME = "mahsun.m3u"
 STATIC_LOGO = "https://i.hizliresim.com/8xzjgqv.jpg"
 
 def get_andro_content():

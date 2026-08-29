@@ -24,43 +24,43 @@ def get_andro_content():
     headers = HEADERS.copy()
     
     channels = [
-        ("androstreamlivebiraz1", 'TR:beIN Sport 1 HD'),
-        ("androstreamlivebs1", 'TR:beIN Sport 1 HD'),
-        ("androstreamlivebs2", 'TR:beIN Sport 2 HD'),
-        ("androstreamlivebs3", 'TR:beIN Sport 3 HD'),
-        ("androstreamlivebs4", 'TR:beIN Sport 4 HD'),
-        ("androstreamlivebs5", 'TR:beIN Sport 5 HD'),
-        ("androstreamlivebsm1", 'TR:beIN Sport Max 1 HD'),
-        ("androstreamlivebsm2", 'TR:beIN Sport Max 2 HD'),
-        ("androstreamlivess1", 'TR:S Sport 1 HD'),
-        ("androstreamlivess2", 'TR:S Sport 2 HD'),
-        ("androstreamlivets", 'TR:Tivibu Sport HD'),
-        ("androstreamlivets1", 'TR:Tivibu Sport 1 HD'),
-        ("androstreamlivets2", 'TR:Tivibu Sport 2 HD'),
-        ("androstreamlivets3", 'TR:Tivibu Sport 3 HD'),
-        ("androstreamlivets4", 'TR:Tivibu Sport 4 HD'),
-        ("androstreamlivesm1", 'TR:Smart Sport 1 HD'),
-        ("androstreamlivesm2", 'TR:Smart Sport 2 HD'),
-        ("androstreamlivees1", 'TR:Euro Sport 1 HD'),
-        ("androstreamlivees2", 'TR:Euro Sport 2 HD'),
-        ("androstreamlivetb", 'TR:Tabii HD'),
-        ("androstreamlivetb1", 'TR:Tabii 1 HD'),
-        ("androstreamlivetb2", 'TR:Tabii 2 HD'),
-        ("androstreamlivetb3", 'TR:Tabii 3 HD'),
-        ("androstreamlivetb4", 'TR:Tabii 4 HD'),
-        ("androstreamlivetb5", 'TR:Tabii 5 HD'),
-        ("androstreamlivetb6", 'TR:Tabii 6 HD'),
-        ("androstreamlivetb7", 'TR:Tabii 7 HD'),
-        ("androstreamlivetb8", 'TR:Tabii 8 HD'),
-        ("androstreamliveexn", 'TR:Exxen HD'),
-        ("androstreamliveexn1", 'TR:Exxen 1 HD'),
-        ("androstreamliveexn2", 'TR:Exxen 2 HD'),
-        ("androstreamliveexn3", 'TR:Exxen 3 HD'),
-        ("androstreamliveexn4", 'TR:Exxen 4 HD'),
-        ("androstreamliveexn5", 'TR:Exxen 5 HD'),
-        ("androstreamliveexn6", 'TR:Exxen 6 HD'),
-        ("androstreamliveexn7", 'TR:Exxen 7 HD'),
-        ("androstreamliveexn8", 'TR:Exxen 8 HD')
+                ("androstreamlivebiraz1", 'TR:beIN Sport 1 HD-Mahsun'),
+        ("androstreamlivebs1", 'TR:beIN Sport 1 HD-Mahsun'),
+        ("androstreamlivebs2", 'TR:beIN Sport 2 HD-Mahsun'),
+        ("androstreamlivebs3", 'TR:beIN Sport 3 HD-Mahsun'),
+        ("androstreamlivebs4", 'TR:beIN Sport 4 HD-Mahsun'),
+        ("androstreamlivebs5", 'TR:beIN Sport 5 HD-Mahsun'),
+        ("androstreamlivebsm1", 'TR:beIN Sport Max 1 HD-Mahsun'),
+        ("androstreamlivebsm2", 'TR:beIN Sport Max 2 HD-Mahsun'),
+        ("androstreamlivess1", 'TR:S Sport 1 HD-Mahsun'),
+        ("androstreamlivess2", 'TR:S Sport 2 HD-Mahsun'),
+        ("androstreamlivets", 'TR:Tivibu Sport HD-Mahsun'),
+        ("androstreamlivets1", 'TR:Tivibu Sport 1 HD-Mahsun'),
+        ("androstreamlivets2", 'TR:Tivibu Sport 2 HD-Mahsun'),
+        ("androstreamlivets3", 'TR:Tivibu Sport 3 HD-Mahsun'),
+        ("androstreamlivets4", 'TR:Tivibu Sport 4 HD-Mahsun'),
+        ("androstreamlivesm1", 'TR:Smart Sport 1 HD-Mahsun'),
+        ("androstreamlivesm2", 'TR:Smart Sport 2 HD-Mahsun'),
+        ("androstreamlivees1", 'TR:Euro Sport 1 HD-Mahsun'),
+        ("androstreamlivees2", 'TR:Euro Sport 2 HD-Mahsun'),
+        ("androstreamlivetb", 'TR:Tabii HD-Mahsun'),
+        ("androstreamlivetb1", 'TR:Tabii 1 HD-Mahsun'),
+        ("androstreamlivetb2", 'TR:Tabii 2 HD-Mahsun'),
+        ("androstreamlivetb3", 'TR:Tabii 3 HD-Mahsun'),
+        ("androstreamlivetb4", 'TR:Tabii 4 HD-Mahsun'),
+        ("androstreamlivetb5", 'TR:Tabii 5 HD-Mahsun'),
+        ("androstreamlivetb6", 'TR:Tabii 6 HD-Mahsun'),
+        ("androstreamlivetb7", 'TR:Tabii 7 HD-Mahsun'),
+        ("androstreamlivetb8", 'TR:Tabii 8 HD-Mahsun'),
+        ("androstreamliveexn", 'TR:Exxen HD-Mahsun'),
+        ("androstreamliveexn1", 'TR:Exxen 1 HD-Mahsun'),
+        ("androstreamliveexn2", 'TR:Exxen 2 HD-Mahsun'),
+        ("androstreamliveexn3", 'TR:Exxen 3 HD-Mahsun'),
+        ("androstreamliveexn4", 'TR:Exxen 4 HD-Mahsun'),
+        ("androstreamliveexn5", 'TR:Exxen 5 HD-Mahsun'),
+        ("androstreamliveexn6", 'TR:Exxen 6 HD-Mahsun'),
+        ("androstreamliveexn7", 'TR:Exxen 7 HD-Mahsun'),
+        ("androstreamliveexn8", 'TR:Exxen 8 HD-Mahsun')
     ]
 
     def check_domain(index):
@@ -124,7 +124,7 @@ def get_andro_content():
         for cid, cname in channels:
             final_url = f"{server}/{cid}.m3u8" if "checklist" in server else f"{server}/checklist/{cid}.m3u8"
             final_url = final_url.replace("checklist//", "checklist/")
-            entry = f'#EXTINF:-1 tvg-logo="{STATIC_LOGO}" group-title="Andro-Panel", {cname}\n#EXTVLCOPT:http-referrer={active_site}/\n{final_url}'
+            entry = f'#EXTINF:-1 tvg-logo="{STATIC_LOGO}" group-title="Spor", {cname}\n#EXTVLCOPT:http-referrer={active_site}/\n{final_url}'
             results.append(entry)
             
     return results
